@@ -1,0 +1,12 @@
+call_parentheses = 'Input'
+collapse_simple_statement = 'ConditionalOnly'
+indent_type = 'Tabs'
+column_width = 120
+line_endings = 'Unix'
+quote_style = 'AutoPreferSingle'
+space_after_function_names = 'Never'
+indent_width = 4
+syntax = 'Luau'
+
+[sort_requires]
+enabled = true
