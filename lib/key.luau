@@ -2,12 +2,10 @@
 export type storage = { [id]: any }
 local pre_allocate_amount = 2 ^ 12
 local destroy_handlers: { [storage]: (storage, id) -> () } = {} -- setmetatable({}, { __mode = 'k' }) :: any
-local storages: { storage } = {}
 
 local function pre_allocated_arr(remove: nil | (any, id) -> ()): storage
 	local storage = table.create(pre_allocate_amount)
 	destroy_handlers[storage] = remove :: any
-	table.insert(storages, storage)
 	return storage
 end
 
@@ -44,9 +42,6 @@ local function destroy_id(id: id): ()
 
 	for storage, remove in destroy_handlers do
 		remove(storage, id)
-	end
-	for _, storage in storages do
-		storage[id] = nil
 	end
 
 	table.insert(free_ids, id)

@@ -139,6 +139,9 @@ local function link_11<V>(default: V): (link1<V>, link1<V>)
 
 	backward_link[forward] = backward
 	backward_link[backward] = forward
+
+	key.assert_ensure_id(forward)
+	key.assert_ensure_id(backward)
 	return forward, backward
 end
 local function link_1N<V>(default: V): (linkN<V>, link1<V>)
@@ -147,6 +150,9 @@ local function link_1N<V>(default: V): (linkN<V>, link1<V>)
 
 	backward_link[forward] = backward
 	backward_link[backward] = forward
+
+	key.assert_ensure_id(forward)
+	key.assert_ensure_id(backward)
 	return forward, backward
 end
 local function link_NN<V>(default: V): (linkN<V>, linkN<V>)
@@ -155,6 +161,9 @@ local function link_NN<V>(default: V): (linkN<V>, linkN<V>)
 
 	backward_link[forward] = backward
 	backward_link[backward] = forward
+
+	key.assert_ensure_id(forward)
+	key.assert_ensure_id(backward)
 	return forward, backward
 end
 local function link_N1<V>(default: V): (link1<V>, linkN<V>)

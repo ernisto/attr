@@ -1,3 +1,4 @@
+local archetype = require('./archetype')
 local key = require './key'
 type id = key.id
 
@@ -25,11 +26,17 @@ export type attr<V = any> = {
 }
 
 -- methods
+local source_ids = key.source_ids
 local function attr_find<V>(data: attr<V>, key: id): V?
-	return data[key] --or data[DENSE_STORAGE_OF(key)][key]
+	return data[key]
 end
-local function attr_set<V>(data: attr<V>, key: id, value: V?): ()
-	data[key] = value
+local function attr_set<V>(data: attr<V>, id: id, value: V?): ()
+	if value == nil and data[id] ~= nil then
+		archetype.remove(id, source_ids[data])
+	elseif value ~= nil and data[id] == nil then
+		archetype.add(id, source_ids[data])
+	end
+	data[id] = value
 end
 local function attr_iter<V>(data: attr<V>) --: () -> (id, V)
 	return pairs(data :: any)
@@ -97,6 +104,7 @@ table.freeze(attr_impl)
 local function attr_new<V>(default: V): attr<V>
 	local data = setmetatable(key.pre_allocated_storage(attr_set), attr_impl) :: any
 	attr_default[data] = default
+	key.assert_ensure_id(data)
 	return data
 end
 

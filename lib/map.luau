@@ -1,6 +1,7 @@
 local attr = require('./any')
 type attr<V = any> = attr.attr
 local by_default = attr.by_default
+local attr_set = attr.set
 
 local key = require('./key')
 type id = key.id
@@ -39,7 +40,7 @@ local function map_attr_set<K, V>(data: map_attr<K, V>, key: id, target: K?, val
 		return
 	end
 	if value == nil then return end
-	data[key] = { [target] = value }
+	attr_set(data :: any, key, { [target] = value })
 end
 
 local function map_attr_has<K, V>(data: map_attr<K, V>, key: id, target: K): boolean
