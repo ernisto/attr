@@ -95,7 +95,8 @@ function run.iter_entities_includes_supersets()
 	for id in archetype.iter_entities(AB) do
 		seen[id] = true
 	end
-	assert(seen[e1] and seen[e4], 'AB iter_entities should include AB and ABC')
+	assert(seen[e1], 'AB iter_entities should include AB')
+	assert(seen[e4], 'AB iter_entities should include ABC')
 	assert(not seen[e3], 'AB iter_entities should not include AC')
 
 	local seen2 = {}

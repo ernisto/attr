@@ -7,7 +7,9 @@ local current_archetype = key.pre_allocated_storage() -- archetype
 local with_removed = key.pre_allocated_storage() -- [attribute]: archetype
 local with_added = key.pre_allocated_storage() -- [attribute]: archetype
 local attributes = key.pre_allocated_storage() -- ordered { entity }
-local ids = key.pre_allocated_storage() -- ordered { entity }
+local head_id = key.pre_allocated_storage()
+local next_id = key.pre_allocated_storage()
+local prev_id = key.pre_allocated_storage()
 
 -- defs
 type archetype_id = key.id
@@ -98,7 +100,7 @@ end
 local function next_archetype_with(base_archetype: archetype_id?, new_attribute: attribute_id): archetype_id
 	local existing = if base_archetype
 		then with_added[base_archetype][new_attribute]
-		elseif ids[new_attribute] then new_attribute
+		elseif attributes[new_attribute] then new_attribute
 		else nil
 	if existing then return existing end
 
@@ -107,7 +109,6 @@ local function next_archetype_with(base_archetype: archetype_id?, new_attribute:
 
 	ordered_insert(this_attributes, new_attribute)
 	attributes[archetype] = table.freeze(this_attributes)
-	ids[archetype] = {}
 
 	with_removed[archetype] = { [new_attribute] = base_archetype }
 	with_added[archetype] = {}
@@ -128,7 +129,6 @@ local function next_archetype_without(base_archetype: archetype_id, prev_attribu
 
 	ordered_remove(this_attributes, prev_attribute)
 	attributes[archetype] = table.freeze(this_attributes)
-	ids[archetype] = {}
 
 	with_removed[archetype] = {}
 	with_added[archetype] = { [prev_attribute] = base_archetype }
@@ -174,22 +174,22 @@ end
 
 local function iter_entities(archetype: archetype_id, exclude: { [attribute_id]: true }?): () -> key.id?
 	local next_compatible_archetype = iter_bigger_archetypes(archetype, exclude)
-	local last_index = 0
-	local index = 0
-	local entities
+	local next_entity = head_id[archetype]
 
+	next_compatible_archetype()
 	return function()
-		while index == last_index do
+		if next_entity == nil then return nil end
+
+		local entity = next_entity
+		next_entity = next_id[next_entity]
+
+		while next_entity == nil do
 			local next_archetype = next_compatible_archetype()
-			if next_archetype == nil then return nil :: any end
+			if next_archetype == nil then break end
 
-			entities = ids[next_archetype]
-			last_index = #entities
-			index = 0
+			next_entity = head_id[next_archetype]
 		end
-
-		index += 1
-		return entities[index]
+		return entity
 	end
 end
 local function get_archetype_with(...: attribute_id): archetype_id
@@ -200,9 +200,28 @@ local function get_archetype_with(...: attribute_id): archetype_id
 	return archetype
 end
 
+local function remove_archetype_entity(archetype: archetype_id, id: entity_id)
+	local prev = prev_id[id]
+	local next = next_id[id]
+	if prev then
+		next_id[prev] = next
+	else
+		head_id[archetype] = next
+	end
+	if next then prev_id[next] = prev end
+end
+local function add_archetype_entity(archetype: archetype_id, id: entity_id)
+	local prev_head = head_id[archetype]
+	head_id[archetype] = id
+	prev_id[id] = nil
+
+	if prev_head then prev_id[prev_head] = id end
+	next_id[id] = prev_head
+end
+
 local function set_entity_archetype(id: entity_id, new_archetype: archetype_id?, prev_archetype: archetype_id?)
-	if new_archetype ~= nil then ordered_insert(ids[new_archetype], id) end
-	if prev_archetype ~= nil then ordered_remove(ids[prev_archetype], id) end
+	if prev_archetype ~= nil then remove_archetype_entity(prev_archetype, id) end
+	if new_archetype ~= nil then add_archetype_entity(new_archetype, id) end
 	current_archetype[id] = new_archetype :: any
 end
 local function get_entity_archetype(id: entity_id): archetype_id?
