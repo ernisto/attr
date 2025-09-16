@@ -30,7 +30,7 @@ end
 local function destroy_id(id: id)
 	flush_cleanups(id)
 
-	archetype.remove_archetype(id)
+	archetype.remove(id)
 	free_id(id)
 end
 

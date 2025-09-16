@@ -1,3 +1,4 @@
+local archetype = require('./archetype')
 local attr = require('./any')
 type attr<V = any> = attr.attr
 local attr_find = attr.find
@@ -140,8 +141,8 @@ local function link_11<V>(default: V): (link1<V>, link1<V>)
 	backward_link[forward] = backward
 	backward_link[backward] = forward
 
-	key.ensure_id(forward)
-	key.ensure_id(backward)
+	archetype.with_attr(key.ensure_id(forward))
+	archetype.with_attr(key.ensure_id(backward))
 	return forward, backward
 end
 local function link_1N<V>(default: V): (linkN<V>, link1<V>)
@@ -151,8 +152,8 @@ local function link_1N<V>(default: V): (linkN<V>, link1<V>)
 	backward_link[forward] = backward
 	backward_link[backward] = forward
 
-	key.ensure_id(forward)
-	key.ensure_id(backward)
+	archetype.with_attr(key.ensure_id(forward))
+	archetype.with_attr(key.ensure_id(backward))
 	return forward, backward
 end
 local function link_NN<V>(default: V): (linkN<V>, linkN<V>)
@@ -162,8 +163,8 @@ local function link_NN<V>(default: V): (linkN<V>, linkN<V>)
 	backward_link[forward] = backward
 	backward_link[backward] = forward
 
-	key.ensure_id(forward)
-	key.ensure_id(backward)
+	archetype.with_attr(key.ensure_id(forward))
+	archetype.with_attr(key.ensure_id(backward))
 	return forward, backward
 end
 local function link_N1<V>(default: V): (link1<V>, linkN<V>)

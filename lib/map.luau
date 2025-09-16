@@ -1,3 +1,4 @@
+local archetype = require('./archetype')
 local attr = require('./any')
 type attr<V = any> = attr.attr
 local by_default = attr.by_default
@@ -99,6 +100,7 @@ table.freeze(map_attr_impl)
 local function map_attr<K, V>(default: V): map_attr<K, V>
 	local map_attr = setmetatable(key.pre_allocated_storage(), map_attr_impl)
 	map_attr_default[map_attr :: any] = default
+	archetype.with_attr(key.ensure_id(map_attr))
 	return map_attr :: any
 end
 

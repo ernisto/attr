@@ -32,9 +32,9 @@ local function attr_find<V>(data: attr<V>, key: id): V?
 end
 local function attr_set<V>(data: attr<V>, id: id, value: V?): ()
 	if value == nil and data[id] ~= nil then
-		archetype.remove(id, source_ids[data])
+		archetype.move_to_without(id, source_ids[data])
 	elseif value ~= nil and data[id] == nil then
-		archetype.add(id, source_ids[data])
+		archetype.move_to_with(id, source_ids[data])
 	end
 	data[id] = value
 end
@@ -104,7 +104,7 @@ table.freeze(attr_impl)
 local function attr_new<V>(default: V): attr<V>
 	local data = setmetatable(key.pre_allocated_storage(), attr_impl) :: any
 	attr_default[data] = default
-	key.ensure_id(data)
+	archetype.with_attr(key.ensure_id(data))
 	return data
 end
 

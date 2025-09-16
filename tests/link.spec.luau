@@ -1,4 +1,3 @@
-local archetype = require('../lib/archetype')
 local cleanup = require('../lib/cleanup')
 local key = require('@lib/key')
 local link = require('@lib/link')
