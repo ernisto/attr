@@ -15,40 +15,28 @@ type attribute_id = key.id
 type entity_id = key.id
 
 -- vars
-local by_depth = {}
+local archetype_by_attribute_amount = {}
 
 -- functions
 -- returns nil if theres more than 1 missing attribute
 -- which means no direct transition between those archetypes
-local function get_only_1_missing_attribute(
-	bigger_attributes: { attribute_id },
-	smaller_attributes: { attribute_id }
+local function get_only_1_extra_attribute(
+	attributes: { attribute_id },
+	required_attributes: { attribute_id }
 ): attribute_id?
-	-- both arrays are sorted; return the single element that exists in bigger but not in smaller
-	if #bigger_attributes ~= #smaller_attributes + 1 then return end
+	local matching_index = 1
+	local extra: attribute_id?
 
-	local i = 1
-	local j = 1
-	local missing: attribute_id?
-
-	while i <= #bigger_attributes and j <= #smaller_attributes do
-		local big_attr = bigger_attributes[i]
-		local small_attr = smaller_attributes[j]
-
-		if big_attr == small_attr then
-			i += 1
-			j += 1
-		else
-			if missing ~= nil then return end
-			missing = big_attr
-			i += 1
+	for _, attr in attributes do
+		local required_attr = required_attributes[matching_index]
+		if attr == required_attr then
+			matching_index += 1
+			continue
 		end
+		if extra then return end
+		extra = attr
 	end
-
-	-- if we finished smaller without finding a diff, the last element is the extra
-	if j <= #smaller_attributes then return end
-	if missing == nil then missing = bigger_attributes[#bigger_attributes] end
-	return missing
+	return extra
 end
 local function match_attributes(attributes: { attribute_id }, required_attributes: { attribute_id }): boolean
 	local match_goal = #required_attributes
@@ -67,29 +55,40 @@ local function match_attributes(attributes: { attribute_id }, required_attribute
 	return false
 end
 
-local function bind_transitions(archetype: archetype_id)
+local function bind_transitions(
+	archetype: archetype_id,
+	from_small_archetype: archetype_id?,
+	from_big_archetype: archetype_id?
+)
 	local this_attributes = attributes[archetype]
-	local depth = #this_attributes
-	local removes = {}
-	local adds = {}
+	local removes = with_removed[archetype]
+	local adds = with_added[archetype]
+	local attributes_amount = #this_attributes
 
-	by_depth[depth] = by_depth[depth] or {}
-	table.insert(by_depth[depth], archetype)
+	archetype_by_attribute_amount[attributes_amount] = archetype_by_attribute_amount[attributes_amount] or {}
+	table.insert(archetype_by_attribute_amount[attributes_amount], archetype)
 
-	with_removed[archetype] = removes
-	with_added[archetype] = adds
+	local smaller_archetypes = archetype_by_attribute_amount[attributes_amount - 1]
+	if smaller_archetypes and (not from_small_archetype or #smaller_archetypes > 1) then
+		for _, small_archetype in smaller_archetypes do
+			if small_archetype == from_small_archetype then continue end
 
-	for _, small_archetype in by_depth[depth - 1] or {} :: any do
-		local missing_attribute = get_only_1_missing_attribute(this_attributes, attributes[small_archetype])
-		if not missing_attribute then continue end
+			local missing_attribute = get_only_1_extra_attribute(this_attributes, attributes[small_archetype])
+			if not missing_attribute then continue end
 
-		removes[missing_attribute] = small_archetype
-		with_added[small_archetype][missing_attribute] = archetype
+			removes[missing_attribute] = small_archetype
+			with_added[small_archetype][missing_attribute] = archetype
+		end
 	end
 
-	if by_depth[depth + 1] == nil then return end
-	for _, big_archetype in by_depth[depth + 1] do
-		local extra_attribute = get_only_1_missing_attribute(attributes[big_archetype], this_attributes)
+	local bigger_archetypes = archetype_by_attribute_amount[attributes_amount + 1]
+	if bigger_archetypes == nil then return end
+	if from_big_archetype and #bigger_archetypes == 1 then return end
+
+	for _, big_archetype in bigger_archetypes do
+		if big_archetype == from_big_archetype then continue end
+
+		local extra_attribute = get_only_1_extra_attribute(attributes[big_archetype], this_attributes)
 		if not extra_attribute then continue end
 
 		with_removed[big_archetype][extra_attribute] = archetype
@@ -104,18 +103,25 @@ local function next_archetype_with(base_archetype: archetype_id?, new_attribute:
 	if existing then return existing end
 
 	local archetype = if base_archetype then key.ensure_id() else new_attribute
-	local this_attributes = if base_archetype == nil then {} else table.clone(attributes[base_archetype])
+	local this_attributes = if base_archetype then table.clone(attributes[base_archetype]) else {}
 
 	ordered_insert(this_attributes, new_attribute)
 	attributes[archetype] = table.freeze(this_attributes)
 	ids[archetype] = {}
 
-	bind_transitions(archetype)
+	with_removed[archetype] = { [new_attribute] = base_archetype }
+	with_added[archetype] = {}
+
+	bind_transitions(archetype, base_archetype)
+	if base_archetype == nil then return archetype end
+
+	with_added[base_archetype][new_attribute] = archetype
 	return archetype
 end
-local function next_archetype_without(base_archetype: archetype_id, prev_attribute: attribute_id): archetype_id
+local function next_archetype_without(base_archetype: archetype_id, prev_attribute: attribute_id): archetype_id?
 	local existing = with_removed[base_archetype][prev_attribute]
 	if existing then return existing end
+	if #attributes[base_archetype] == 1 then return nil end
 
 	local archetype = key.ensure_id()
 	local this_attributes = table.clone(attributes[base_archetype])
@@ -124,7 +130,12 @@ local function next_archetype_without(base_archetype: archetype_id, prev_attribu
 	attributes[archetype] = table.freeze(this_attributes)
 	ids[archetype] = {}
 
-	bind_transitions(archetype)
+	with_removed[archetype] = {}
+	with_added[archetype] = { [prev_attribute] = base_archetype }
+
+	bind_transitions(archetype, nil, base_archetype)
+
+	with_removed[base_archetype][prev_attribute] = archetype
 	return archetype
 end
 
@@ -252,4 +263,6 @@ return table.freeze {
 
 	set = set_entity_archetype,
 	get = get_entity_archetype,
+
+	next_archetype_with = next_archetype_with,
 }
