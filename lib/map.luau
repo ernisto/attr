@@ -97,7 +97,7 @@ table.freeze(map_attr_impl)
 
 -- constructors
 local function map_attr<K, V>(default: V): map_attr<K, V>
-	local map_attr = setmetatable(key.pre_allocated_storage(map_attr_set), map_attr_impl)
+	local map_attr = setmetatable(key.pre_allocated_storage(), map_attr_impl)
 	map_attr_default[map_attr :: any] = default
 	return map_attr :: any
 end

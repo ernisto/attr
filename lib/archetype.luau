@@ -3,6 +3,7 @@ local ordered_remove = utils.ordered_remove
 local ordered_insert = utils.ordered_insert
 
 local key = require('./key')
+local current_archetype = key.pre_allocated_storage() -- archetype
 local with_removed = key.pre_allocated_storage() -- [attribute]: archetype
 local with_added = key.pre_allocated_storage() -- [attribute]: archetype
 local attributes = key.pre_allocated_storage() -- ordered { entity }
@@ -13,21 +14,20 @@ type archetype_id = key.id
 type attribute_id = key.id
 type entity_id = key.id
 
-local current_archetype
 local function remove_archetype(id)
 	local archetype = current_archetype[id]
 	if archetype == nil then return end
 
 	for _, attribute in attributes[archetype] do
-		attribute[id] = nil
+		local data = assert(key.id_sources[attribute] :: any)
+		data:remove(id)
 	end
 	ordered_remove(ids[archetype], id)
 	current_archetype[id] = nil
 end
-current_archetype = key.pre_allocated_storage(remove_archetype)
 
 -- vars
-local root = key.assert_ensure_id()
+local root = key.ensure_id()
 attributes[root] = table.freeze {}
 with_added[root] = {}
 ids[root] = {}
@@ -113,7 +113,7 @@ local function bind_transitions(archetype: archetype_id)
 	end
 end
 local function new_archetype_with(base_archetype: archetype_id, new_attribute: attribute_id): archetype_id
-	local archetype = if base_archetype == root then new_attribute else key.assert_ensure_id()
+	local archetype = if base_archetype == root then new_attribute else key.ensure_id()
 	local this_attributes = table.clone(attributes[base_archetype])
 
 	ordered_insert(this_attributes, new_attribute)
@@ -124,7 +124,7 @@ local function new_archetype_with(base_archetype: archetype_id, new_attribute: a
 	return archetype
 end
 local function new_archetype_without(base_archetype: archetype_id, prev_attribute: attribute_id): archetype_id
-	local archetype = key.assert_ensure_id()
+	local archetype = key.ensure_id()
 	local this_attributes = table.clone(attributes[base_archetype])
 
 	ordered_remove(this_attributes, prev_attribute)
@@ -240,6 +240,7 @@ return table.freeze {
 	get_attrs = get_attrs,
 	is_a = is_a,
 
+	remove_archetype = remove_archetype,
 	remove = remove,
 	add = add,
 

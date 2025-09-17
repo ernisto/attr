@@ -1,4 +1,5 @@
 local any = require '@self/any'
+local cleanup = require('@self/cleanup')
 local key = require '@self/key'
 local link = require '@self/link'
 
@@ -11,10 +12,11 @@ export type id = key.id
 -- module
 return table.freeze {
 	id_source = key.source,
-	id = key.assert_ensure_id,
-	destroy = key.destroy_id,
-	on_destroy = key.on_destroy,
-	gc_step = key.destroy_unused_ids,
+	id = key.ensure_id,
+
+	destroy = cleanup.destroy,
+	on_destroy = cleanup.on_destroy,
+	gc_step = cleanup.destroy_unused_ids,
 
 	any = any.new,
 	ref = link.link_N1,

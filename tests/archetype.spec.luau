@@ -7,7 +7,9 @@ local run, focus, skip = {}, {}, {}
 
 local function tag()
 	local a = attr.any(true)
-	return a, attr.id(a)
+	local A = attr.id(a)
+	archetype.with_attr(A)
+	return a, A
 end
 local function entity(...: attr.attr<boolean>)
 	local id = attr.id()

@@ -5,7 +5,7 @@ local run, focus, skip = {}, {}, {}
 
 function run.set_find_has_and_remove()
 	local attr = any.new(0)
-	local id = key.assert_ensure_id()
+	local id = key.ensure_id()
 	assert(not attr:has(id), 'should not have before set')
 	attr:set(id, 5)
 	assert(attr:has(id), 'should have after set')
@@ -16,7 +16,7 @@ end
 
 function run.ensure_creates_with_primitive_default()
 	local attr = any.new(123)
-	local id = key.assert_ensure_id()
+	local id = key.ensure_id()
 	local v = attr:ensure(id)
 	assert(v == 123, 'ensure should create with primitive default')
 	assert(attr:find(id) == 123, 'value stored after ensure')
@@ -25,8 +25,8 @@ end
 function run.ensure_clones_table_default_per_id()
 	local default = { a = 1 }
 	local attr = any.new(default)
-	local id1 = key.assert_ensure_id()
-	local id2 = key.assert_ensure_id()
+	local id1 = key.ensure_id()
+	local id2 = key.ensure_id()
 	local v1 = attr:ensure(id1)
 	local v2 = attr:ensure(id2)
 	assert(v1 ~= default, 'ensure should clone table default')
@@ -38,7 +38,7 @@ end
 
 function run.assert_errors_when_missing()
 	local attr = any.new(false)
-	local id = key.assert_ensure_id()
+	local id = key.ensure_id()
 	local ok = pcall(function()
 		attr:assert(id)
 	end)
@@ -47,8 +47,8 @@ end
 
 function run.all_returns_shallow_copy()
 	local attr = any.new(0)
-	local id1 = key.assert_ensure_id()
-	local id2 = key.assert_ensure_id()
+	local id1 = key.ensure_id()
+	local id2 = key.ensure_id()
 	attr:set(id1, 10)
 	attr:set(id2, 20)
 	local all = attr:all()

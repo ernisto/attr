@@ -102,9 +102,9 @@ attr_impl.kind = 'any'
 table.freeze(attr_impl)
 
 local function attr_new<V>(default: V): attr<V>
-	local data = setmetatable(key.pre_allocated_storage(attr_set), attr_impl) :: any
+	local data = setmetatable(key.pre_allocated_storage(), attr_impl) :: any
 	attr_default[data] = default
-	key.assert_ensure_id(data)
+	key.ensure_id(data)
 	return data
 end
 

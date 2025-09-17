@@ -100,8 +100,8 @@ function run.dont_duplicate_entities_when_2_links()
 	assert(data[1].health == 10)
 	assert(data[1].equipped == 2)
 
-	assert(data[1].owneds[1] == 2)
-	assert(data[1].owneds[2] == 3)
+	assert(table.find(data[1].owneds, 2))
+	assert(table.find(data[1].owneds, 3))
 
 	assert(data[2].health == 15)
 	assert(data[3].health == 05)

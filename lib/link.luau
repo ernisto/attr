@@ -134,36 +134,36 @@ table.freeze(linkNN_impl)
 
 -- constructors
 local function link_11<V>(default: V): (link1<V>, link1<V>)
-	local forward = setmetatable(key.pre_allocated_storage(link11_set), link11_impl) :: any
-	local backward = setmetatable(key.pre_allocated_storage(link11_set), link11_impl) :: any
+	local forward = setmetatable(key.pre_allocated_storage(), link11_impl) :: any
+	local backward = setmetatable(key.pre_allocated_storage(), link11_impl) :: any
 
 	backward_link[forward] = backward
 	backward_link[backward] = forward
 
-	key.assert_ensure_id(forward)
-	key.assert_ensure_id(backward)
+	key.ensure_id(forward)
+	key.ensure_id(backward)
 	return forward, backward
 end
 local function link_1N<V>(default: V): (linkN<V>, link1<V>)
-	local forward = setmetatable(key.pre_allocated_storage(link1N_set), link1N_impl) :: any
-	local backward = setmetatable(key.pre_allocated_storage(linkN1_set), linkN1_impl) :: any
+	local forward = setmetatable(key.pre_allocated_storage(), link1N_impl) :: any
+	local backward = setmetatable(key.pre_allocated_storage(), linkN1_impl) :: any
 
 	backward_link[forward] = backward
 	backward_link[backward] = forward
 
-	key.assert_ensure_id(forward)
-	key.assert_ensure_id(backward)
+	key.ensure_id(forward)
+	key.ensure_id(backward)
 	return forward, backward
 end
 local function link_NN<V>(default: V): (linkN<V>, linkN<V>)
-	local forward = setmetatable(key.pre_allocated_storage(linkNN_set), linkNN_impl) :: any
-	local backward = setmetatable(key.pre_allocated_storage(linkNN_set), linkNN_impl) :: any
+	local forward = setmetatable(key.pre_allocated_storage(), linkNN_impl) :: any
+	local backward = setmetatable(key.pre_allocated_storage(), linkNN_impl) :: any
 
 	backward_link[forward] = backward
 	backward_link[backward] = forward
 
-	key.assert_ensure_id(forward)
-	key.assert_ensure_id(backward)
+	key.ensure_id(forward)
+	key.ensure_id(backward)
 	return forward, backward
 end
 local function link_N1<V>(default: V): (link1<V>, linkN<V>)
