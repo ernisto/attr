@@ -3,19 +3,25 @@ local key = require('./key')
 local free_id = key.free_id
 type id = key.id
 
-local cleanups: { [id]: { (id) -> () } } = key.pre_allocated_storage()
+local cleanups: { [id]: { id | (id) -> () } } = key.pre_allocated_storage()
+local inner_destroy_id
 
 -- functions
 local function flush_cleanups(id: id)
 	local id_cleanups = cleanups[id]
 	if id_cleanups == nil then return end
 
-	for _, cleanup in id_cleanups :: any do
-		cleanup(id)
+	for i = #id_cleanups, 1, -1 do
+		local cleanup = id_cleanups[i]
+		if type(cleanup) == 'function' then
+			cleanup(id)
+		else
+			inner_destroy_id(cleanup)
+		end
 	end
 	cleanups[id] = nil
 end
-local function on_destroy(id: id, cleanup: (id) -> ())
+local function on_destroy(id: id, cleanup: id | (id) -> ())
 	local id_cleanups = cleanups[id]
 	if id_cleanups ~= nil then return table.insert(id_cleanups :: any, cleanup) end
 	cleanups[id] = { cleanup }
@@ -45,6 +51,7 @@ local function destroy_unused_ids(): ()
 end
 
 -- module
+inner_destroy_id = destroy_id
 return table.freeze {
 	destroy_unused_ids = destroy_unused_ids,
 	on_destroy = on_destroy,
