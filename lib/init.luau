@@ -2,6 +2,7 @@ local any = require '@self/any'
 local cleanup = require('@self/cleanup')
 local key = require '@self/key'
 local link = require '@self/link'
+local observer = require '@self/observer'
 
 export type link_attr<T> = link.link_attr<T>
 export type link1_attr<T> = link.link1<T>
@@ -17,6 +18,10 @@ return table.freeze {
 	destroy = cleanup.destroy,
 	on_destroy = cleanup.on_destroy,
 	gc_step = cleanup.destroy_unused_ids,
+
+	on_add = observer.bind_add,
+	on_remove = observer.bind_remove,
+	on_change = observer.bind_change,
 
 	any = any.new,
 	ref = link.link_N1,

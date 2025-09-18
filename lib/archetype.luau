@@ -232,6 +232,7 @@ local function move_entity_to_with(id: entity_id, added: attribute_id)
 	local prev_archetype = get_entity_archetype(id)
 	local new_archetype = next_archetype_with(prev_archetype, added)
 	set_entity_archetype(id, new_archetype, prev_archetype)
+	return new_archetype
 end
 local function move_entity_to_without(id: entity_id, removed: attribute_id)
 	local prev_archetype = get_entity_archetype(id)
@@ -271,6 +272,8 @@ return table.freeze {
 
 	iter_entities = iter_entities,
 	with_attr = get_archetype_with,
+
+	attributes = attributes,
 
 	-- entity
 	remove = remove_entity_archetype,

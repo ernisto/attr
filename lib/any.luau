@@ -1,6 +1,12 @@
 local archetype = require('./archetype')
 local key = require './key'
+local observer = require('./observer')
 type id = key.id
+
+-- pair(any, player) -> owner(player), replicating(player)
+-- pair(owner, player) -> item1, item2
+-- pair(owner, any) -> item1, item2, item3
+-- owner -> player
 
 -- functions
 local function by_default<V>(defined_default: V): V
@@ -31,10 +37,18 @@ local function attr_find<V>(data: attr<V>, key: id): V?
 	return data[key]
 end
 local function attr_set<V>(data: attr<V>, id: id, value: V?): ()
-	if value == nil and data[id] ~= nil then
-		archetype.move_to_without(id, source_ids[data])
-	elseif value ~= nil and data[id] == nil then
-		archetype.move_to_with(id, source_ids[data])
+	local attr_id = source_ids[data]
+	local prev_value = data[id]
+
+	if value == nil and prev_value ~= nil then
+		local prev_arch = archetype.get(id)
+		archetype.move_to_without(id, attr_id)
+		observer.fire_remove(id, prev_arch :: any, attr_id)
+	elseif value ~= nil and prev_value == nil then
+		local new_arch = archetype.move_to_with(id, attr_id)
+		observer.fire_add(id, new_arch, attr_id)
+	else
+		observer.fire_change(id, archetype.get(id) :: any, attr_id)
 	end
 	data[id] = value
 end
