@@ -124,7 +124,6 @@ local function next_archetype_with(base_archetype: archetype_id?, new_attribute:
 
 	with_added[base_archetype][new_attribute] = archetype
 	table.insert(archetypes_with_transition_of[new_attribute], archetype)
-	table.insert(archetypes_with_transition_of[new_attribute], base_archetype)
 
 	return archetype
 end
@@ -151,6 +150,7 @@ local function next_archetype_without(base_archetype: archetype_id, prev_attribu
 end
 
 local function iter_smaller_archetypes(archetype: archetype_id, with: { [attribute_id]: true }?): () -> archetype_id?
+	local already_queued = { [archetype] = true }
 	local pending = { archetype }
 	local index = 1
 
@@ -159,6 +159,8 @@ local function iter_smaller_archetypes(archetype: archetype_id, with: { [attribu
 		if archetypes_with_transition_of[attribute] == nil then continue end
 		for _, next_archetype in archetypes_with_transition_of[attribute] do
 			if not match_attributes(this_attributes, attributes[next_archetype]) then continue end
+			if already_queued[next_archetype] then continue end
+			already_queued[next_archetype] = true
 			table.insert(pending, next_archetype)
 		end
 	end
@@ -169,6 +171,8 @@ local function iter_smaller_archetypes(archetype: archetype_id, with: { [attribu
 
 		for removed_attr, new_archetype in with_removed[compatible_archetype] do
 			if with and with[removed_attr] then continue end
+			if already_queued[new_archetype] then continue end
+			already_queued[new_archetype] = true
 			table.insert(pending, new_archetype)
 		end
 		index += 1
@@ -176,6 +180,7 @@ local function iter_smaller_archetypes(archetype: archetype_id, with: { [attribu
 	end
 end
 local function iter_bigger_archetypes(archetype: archetype_id, without: { [attribute_id]: true }?): () -> archetype_id?
+	local already_queued = { [archetype] = true }
 	local pending = { archetype }
 	local index = 1
 
@@ -184,6 +189,8 @@ local function iter_bigger_archetypes(archetype: archetype_id, without: { [attri
 		if archetypes_with_transition_of[attribute] == nil then continue end
 		for _, next_archetype in archetypes_with_transition_of[attribute] do
 			if not match_attributes(attributes[next_archetype], this_attributes) then continue end
+			if already_queued[next_archetype] then continue end
+			already_queued[next_archetype] = true
 			table.insert(pending, next_archetype)
 		end
 	end
@@ -194,6 +201,8 @@ local function iter_bigger_archetypes(archetype: archetype_id, without: { [attri
 
 		for added_attr, new_archetype in with_added[compatible_archetype] do
 			if without and without[added_attr] then continue end
+			if already_queued[new_archetype] then continue end
+			already_queued[new_archetype] = true
 			table.insert(pending, new_archetype)
 		end
 		index += 1
