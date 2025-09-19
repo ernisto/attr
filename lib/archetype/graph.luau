@@ -14,6 +14,7 @@ type entity_id = key.id
 
 -- vars
 local archetype_by_attribute_amount = {}
+local archetypes_with_transition_of = {} -- unreachable archetypes through transitions
 
 -- functions
 -- returns nil if theres more than 1 missing attribute
@@ -38,7 +39,7 @@ local function get_only_1_extra_attribute(
 end
 local function match_attributes(attributes: { attribute_id }, required_attributes: { attribute_id }): boolean
 	local match_goal = #required_attributes
-	if #attributes < match_goal then return false end
+	if #attributes <= match_goal then return false end
 
 	local match_count = 0
 	local next_required = required_attributes[1]
@@ -76,6 +77,8 @@ local function bind_transitions(
 
 			removes[missing_attribute] = small_archetype
 			with_added[small_archetype][missing_attribute] = archetype
+
+			table.insert(archetypes_with_transition_of[missing_attribute], archetype)
 		end
 	end
 
@@ -91,6 +94,8 @@ local function bind_transitions(
 
 		with_removed[big_archetype][extra_attribute] = archetype
 		adds[extra_attribute] = big_archetype
+
+		table.insert(archetypes_with_transition_of[extra_attribute], big_archetype)
 	end
 end
 
@@ -110,10 +115,17 @@ local function next_archetype_with(base_archetype: archetype_id?, new_attribute:
 	with_removed[archetype] = { [new_attribute] = base_archetype }
 	with_added[archetype] = {}
 
+	if archetypes_with_transition_of[new_attribute] == nil then
+		archetypes_with_transition_of[new_attribute] = { new_attribute }
+	end
+
 	bind_transitions(archetype, base_archetype)
 	if base_archetype == nil then return archetype end
 
 	with_added[base_archetype][new_attribute] = archetype
+	table.insert(archetypes_with_transition_of[new_attribute], archetype)
+	table.insert(archetypes_with_transition_of[new_attribute], base_archetype)
+
 	return archetype
 end
 local function next_archetype_without(base_archetype: archetype_id, prev_attribute: attribute_id): archetype_id?
@@ -133,12 +145,23 @@ local function next_archetype_without(base_archetype: archetype_id, prev_attribu
 	bind_transitions(archetype, nil, base_archetype)
 
 	with_removed[base_archetype][prev_attribute] = archetype
+	table.insert(archetypes_with_transition_of[prev_attribute], base_archetype)
+
 	return archetype
 end
 
 local function iter_smaller_archetypes(archetype: archetype_id, with: { [attribute_id]: true }?): () -> archetype_id?
 	local pending = { archetype }
 	local index = 1
+
+	local this_attributes = attributes[archetype]
+	for _, attribute in this_attributes do
+		if archetypes_with_transition_of[attribute] == nil then continue end
+		for _, next_archetype in archetypes_with_transition_of[attribute] do
+			if not match_attributes(this_attributes, attributes[next_archetype]) then continue end
+			table.insert(pending, next_archetype)
+		end
+	end
 
 	return function()
 		local compatible_archetype = pending[index]
@@ -155,6 +178,15 @@ end
 local function iter_bigger_archetypes(archetype: archetype_id, without: { [attribute_id]: true }?): () -> archetype_id?
 	local pending = { archetype }
 	local index = 1
+
+	local this_attributes = attributes[archetype]
+	for _, attribute in this_attributes do
+		if archetypes_with_transition_of[attribute] == nil then continue end
+		for _, next_archetype in archetypes_with_transition_of[attribute] do
+			if not match_attributes(attributes[next_archetype], this_attributes) then continue end
+			table.insert(pending, next_archetype)
+		end
+	end
 
 	return function()
 		local compatible_archetype = pending[index]

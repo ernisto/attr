@@ -1,11 +1,12 @@
 local archetype = require('../lib/archetype')
+local graph = require('../lib/archetype/graph')
 local key = require('../lib/key')
 local run = {}
 
 local N = 1000
 
 local id = key.ensure_id
-local next_archetype_with = archetype.next_archetype_with
+local next_archetype_with = graph.next_archetype_with
 
 function run.several_archetype()
 	local subject = key.ensure_id()
@@ -33,5 +34,5 @@ function run.large_archetype()
 	print('archetype with 1000 entities', b - a)
 end
 
--- run.several_archetype()
+run.several_archetype()
 run.large_archetype()

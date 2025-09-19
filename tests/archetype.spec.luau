@@ -63,12 +63,6 @@ function run.iter_smaller_archetypes_includes_subsets_without_transition()
 	local AB = arch_attrs(A, B)
 	local ABC = arch_attrs(A, B, C)
 
-	print('A', A)
-	print('B', B)
-	print('C', C)
-	print('AB', AB)
-	print('ABC', ABC)
-
 	local bigger = collect_iter(archetype.iter_smaller_archetypes(ABC))
 	local bigger_set = to_set(bigger)
 
