@@ -3,6 +3,7 @@ local current_archetype = key.pre_allocated_storage() -- archetype
 local head_id = key.pre_allocated_storage()
 local next_id = key.pre_allocated_storage()
 local prev_id = key.pre_allocated_storage()
+local id_sources = key.id_sources
 
 local graph = require('@self/graph')
 local next_archetype_without = graph.next_archetype_without
@@ -101,10 +102,19 @@ local function remove_entity_archetype(id: entity_id)
 	if archetype == nil then return end
 
 	for _, attribute in attributes[archetype] do
-		local data = assert(key.id_sources[attribute] :: any)
-		data:remove(id)
+		local data = id_sources[attribute] :: any
+		if data then data:remove(id) end
 	end
 	set_entity_archetype(id, nil, archetype)
+end
+local function destroy_attribute(attribute: attribute_id)
+	local data = id_sources[attribute] :: any
+	if data ~= nil then
+		for id in iter_entities(attribute) do
+			data:remove(id)
+		end
+	end
+	graph.destroy(attribute)
 end
 
 -- module
@@ -115,6 +125,8 @@ return table.freeze {
 	iter_entities = iter_entities,
 	with_attr = get_archetype_with,
 
+	-- attribute
+	destroy_attribute = destroy_attribute,
 	attributes = attributes,
 
 	-- entity
