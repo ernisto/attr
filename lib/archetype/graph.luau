@@ -211,13 +211,20 @@ local function iter_bigger_archetypes(archetype: archetype_id, without: { [attri
 end
 
 local function destroy(root: archetype_id)
+	if attributes[root] == nil then return end
+
+	local archs = {}
 	for arch in iter_bigger_archetypes(root) do
+		table.insert(archs, arch)
+	end
+
+	for _, arch in archs do
 		for attribute, prev_arch in with_removed[arch] do
 			with_added[prev_arch][attribute] = nil
 			local attribute_transitions = archetypes_with_transition_of[attribute]
 
 			local index = table.find(attribute_transitions, arch)
-			if index then table.remove(attribute_transitions, arch) end
+			table.remove(attribute_transitions, index)
 		end
 		for attribute, next_arch in with_added[arch] do
 			with_removed[next_arch][attribute] = nil
@@ -225,12 +232,12 @@ local function destroy(root: archetype_id)
 
 		local archetypes_with_same_attributes_amount = archetype_by_attribute_amount[#attributes[arch]]
 		local index = table.find(archetypes_with_same_attributes_amount, arch)
-		if index then table.remove(archetypes_with_same_attributes_amount, arch) end
+		table.remove(archetypes_with_same_attributes_amount, index)
 
-		-- with_removed[arch] = nil
-		-- with_added[arch] = nil
-		-- attributes[arch] = nil
-		-- key.free_id(arch)
+		with_removed[arch] = nil
+		with_added[arch] = nil
+		attributes[arch] = nil
+		key.free_id(arch)
 	end
 end
 
