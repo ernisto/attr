@@ -15,23 +15,22 @@ type attribute_id = key.id
 type entity_id = key.id
 
 -- functions
-local function iter_entities(archetype: archetype_id, exclude: { [attribute_id]: true }?): () -> key.id?
-	local next_compatible_archetype = graph.iter_bigger_archetypes(archetype, exclude)
-	local next_entity = head_id[archetype]
+local function iter_entities(root_archetype: archetype_id, exclude: { [attribute_id]: true }?): () -> key.id?
+	local next_compatible_archetype = graph.iter_bigger_archetypes(root_archetype, exclude)
+	local archetype = next_compatible_archetype()
+	local next_entity = archetype and head_id[archetype]
 
-	next_compatible_archetype()
 	return function()
-		if next_entity == nil then return nil end
-
-		local entity = next_entity
-		next_entity = next_id[next_entity]
-
+		if archetype == nil then return end
 		while next_entity == nil do
-			local next_archetype = next_compatible_archetype()
-			if next_archetype == nil then break end
+			archetype = next_compatible_archetype()
+			if archetype == nil then break end
 
-			next_entity = head_id[next_archetype]
+			next_entity = head_id[archetype]
 		end
+		local entity = next_entity
+
+		next_entity = next_id[next_entity]
 		return entity
 	end
 end
