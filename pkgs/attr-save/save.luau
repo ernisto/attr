@@ -2,9 +2,10 @@ local attr = require('../../lib')
 local serde = require('./serde')
 
 local handler_attribute = attr.any(nil :: any)
-local saving_attributes = attr.refs('key')
-local saving_N_handlers = attr.refs('key')
-local saving_1_handlers = attr.refs('key')
+local save_key = attr.any('key')
+local saving_attributes = attr.refs()
+local saving_N_handlers = attr.refs()
+local saving_1_handlers = attr.refs()
 local saving_serde = attr.any({} :: serde.property)
 
 export type data = { [attr.id]: { [attr_key]: any } }
@@ -12,18 +13,21 @@ export type attr_key = string
 
 -- functions
 local function include_attr(handler: attr.id, attribute: attr.attr<any>, key: attr_key)
-	saving_attributes:set(handler, attr.id(attribute), key)
+	saving_attributes:add(handler, attribute)
+	save_key:set(attribute, key)
 end
-local function include_ids(handler: attr.id, attribute: attr.linkN_attr<any>, key: attr_key): attr.id
+local function include_ids(handler: attr.id, attribute: attr.linkN_attr, key: attr_key): attr.id
 	local child_handler = attr.id()
+	saving_N_handlers:add(handler, child_handler)
 	handler_attribute:set(child_handler, attribute)
-	saving_N_handlers:set(handler, child_handler, key)
+	save_key:set(child_handler, key)
 	return child_handler
 end
-local function include_id(handler: attr.id, attribute: attr.link1_attr<any>, key: attr_key): attr.id
+local function include_id(handler: attr.id, attribute: attr.link1_attr, key: attr_key): attr.id
 	local child_handler = attr.id()
+	saving_1_handlers:add(handler, child_handler)
 	handler_attribute:set(child_handler, attribute)
-	saving_1_handlers:set(handler, child_handler, key)
+	save_key:set(child_handler, key)
 	return child_handler
 end
 
@@ -54,15 +58,17 @@ local function save(root_handler: attr.id, root_key: attr.key): data
 		local entity_data = data[internal_id] or {}
 		data[internal_id] = entity_data
 
-		for attribute, key in saving_attributes:all(handler) do
+		for _, attribute_id in saving_attributes:all(handler) do
+			local key = save_key:assert(attribute_id)
 			if entity_data[key] ~= nil then continue end
-			local attr_serde = saving_serde:find(attribute)
+			local attr_serde = saving_serde:find(attribute_id)
 
-			local value = assert(attr.id_source(attribute)):find(real_id)
+			local value = assert(attr.id_source(attribute_id)):find(real_id)
 			entity_data[key] = if attr_serde then serde.serialize(real_id, attr_serde, value) else value
 		end
 
-		for sub_handler_id, key in saving_1_handlers:all(handler) do
+		for _, sub_handler_id in saving_1_handlers:all(handler) do
+			local key = save_key:assert(sub_handler_id)
 			if entity_data[key] ~= nil then continue end
 			local attribute = handler_attribute:assert(sub_handler_id)
 
@@ -74,14 +80,15 @@ local function save(root_handler: attr.id, root_key: attr.key): data
 			table.insert(pending_ids, target_id)
 		end
 
-		for sub_handler_id, key in saving_N_handlers:all(handler) do
+		for _, sub_handler_id in saving_N_handlers:all(handler) do
+			local key = save_key:assert(sub_handler_id)
 			if entity_data[key] ~= nil then continue end
 			local attribute = handler_attribute:assert(sub_handler_id)
 
 			local attr_data = {}
 			entity_data[key] = attr_data
 
-			for target_id in attribute:all(real_id) do
+			for target_id in attribute:iter(real_id) do
 				table.insert(attr_data, get_internal_id(target_id))
 				table.insert(pending_handlers, sub_handler_id)
 				table.insert(pending_ids, target_id)
@@ -109,18 +116,20 @@ local function load(root_handler: attr.id, data: data, root_key: attr.key?): { a
 		local tracked_real_id = tracked_real_ids[internal_id]
 		local entity_data = data[internal_id] or {}
 
-		for attribute, key in saving_attributes:all(handler_id) do
-			local attr_serde = saving_serde:find(attribute)
+		for _, attribute_id in saving_attributes:all(handler_id) do
+			local key = save_key:assert(attribute_id)
+			local attr_serde = saving_serde:find(attribute_id)
 			local value = entity_data[key] or attr_serde and attr_serde.default and attr_serde.default(tracked_real_id)
 
 			if value == nil then continue end
 			local attr_value = if attr_serde then serde.deserialize(tracked_real_id, attr_serde, value) else value
 
-			assert(attr.id_source(attribute)):set(real_id, attr_value)
+			assert(attr.id_source(attribute_id)):set(real_id, attr_value)
 			entity_data[key] = nil
 		end
 
-		for sub_handler_id, key in saving_1_handlers:all(handler_id) do
+		for _, sub_handler_id in saving_1_handlers:all(handler_id) do
+			local key = save_key:assert(sub_handler_id)
 			local value = entity_data[key]
 			if type(value) ~= 'number' then continue end
 
@@ -130,18 +139,19 @@ local function load(root_handler: attr.id, data: data, root_key: attr.key?): { a
 			table.insert(pending_handler_id, sub_handler_id)
 			table.insert(pending_ids, value)
 
-			attribute:set(real_id, target_id, true)
+			attribute:set(real_id, target_id)
 			entity_data[key] = nil
 		end
 
-		for sub_handler_id, key in saving_N_handlers:all(handler_id) do
+		for _, sub_handler_id in saving_N_handlers:all(handler_id) do
+			local key = save_key:assert(sub_handler_id)
 			local value = entity_data[key]
 			if type(value) ~= 'table' then continue end
 
 			local attribute = handler_attribute:assert(sub_handler_id)
 			for _, target in value do
 				local target_id = real_ids[target]
-				attribute:set(real_id, target_id, true)
+				attribute:add(real_id, target_id)
 
 				table.insert(pending_handler_id, sub_handler_id)
 				table.insert(pending_ids, target)

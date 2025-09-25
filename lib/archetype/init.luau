@@ -9,6 +9,7 @@ local alive = key.unsafe_alive
 local graph = require('@self/graph')
 local next_archetype_without = graph.next_archetype_without
 local next_archetype_with = graph.next_archetype_with
+local archetype_has_attribute = graph.has_attribute
 local attributes = graph.attributes
 
 -- defs
@@ -72,7 +73,6 @@ end
 local function get_entity_archetype(id: entity_id): archetype_id?
 	return current_archetype[alive(id)]
 end
-
 local function move_entity_to_with(entity: key.tracked_id, added: attribute_id): archetype_id
 	local prev_archetype = get_entity_archetype(entity)
 	local new_archetype = next_archetype_with(prev_archetype, added)
@@ -98,6 +98,10 @@ end
 local function get_entity_attrs(entity: key.tracked_id): { attribute_id }
 	local archetype = get_entity_archetype(entity)
 	return if archetype then attributes[archetype] else {}
+end
+local function entity_has_attr(entity: entity_id, attribute: attribute_id)
+	local archetype = get_entity_archetype(entity)
+	return archetype ~= nil and archetype_has_attribute(archetype, attribute)
 end
 
 local function remove_entity_archetype(entity: key.tracked_id)
@@ -136,6 +140,7 @@ return table.freeze {
 	-- entity
 	remove = remove_entity_archetype,
 	get_attrs = get_entity_attrs,
+	has_attribute = entity_has_attr,
 	is_a = entity_is_a,
 
 	move_to_without = move_entity_to_without,

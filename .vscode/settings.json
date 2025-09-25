@@ -1,6 +1,6 @@
 {
   "editor.formatOnSave": true,
-  "stylua.targetReleaseVersion": "2.2.0",
+  "stylua.targetReleaseVersion": "latest",
   "files.eol": "\n",
   "files.exclude": {
     "**/*-lock.*": true,

@@ -4,9 +4,9 @@ local key = require '@self/key'
 local link = require '@self/link'
 local observer = require '@self/observer'
 
-export type link_attr<T> = link.link_attr<T>
-export type link1_attr<T> = link.link1<T>
-export type linkN_attr<T> = link.linkN<T>
+export type link_attr = link.link_attr
+export type link1_attr = link.link1
+export type linkN_attr = link.linkN
 export type attr<T> = any.attr<T>
 
 export type tracked_id = key.tracked_id

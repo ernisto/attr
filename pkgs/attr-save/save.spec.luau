@@ -25,7 +25,7 @@ end
 
 function run.deserialize_linkeds()
 	local health = attr.any(0)
-	local owner, owneds = attr.ref(nil)
+	local owner, owneds = attr.ref()
 
 	local player_save = attr.id()
 	save.include_attr(player_save, health, 'health')
@@ -68,8 +68,8 @@ end
 
 function run.dont_duplicate_entities_when_2_links()
 	local health = attr.any(0)
-	local owneds = attr.xrefs(nil)
-	local equipped = attr.xref(nil)
+	local owneds = attr.xrefs()
+	local equipped = attr.xref()
 
 	local player_save = attr.id()
 	save.include_attr(player_save, health, 'health')
@@ -108,8 +108,8 @@ function run.dont_duplicate_entities_when_2_links()
 end
 
 function run.each_link_deserialize_own_attributes()
-	local storeds = attr.xrefs(nil)
-	local equipped = attr.xref(nil)
+	local storeds = attr.xrefs()
+	local equipped = attr.xref()
 
 	local cooldown = attr.any(0)
 	local slot = attr.any(0)

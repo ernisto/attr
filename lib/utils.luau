@@ -15,9 +15,14 @@ end
 local function ordered_remove(arr: { number }, value: number)
 	table.remove(arr, ordered_find(arr, value))
 end
+local function find(arr: { number }, value: number): number?
+	local index = ordered_find(arr, value)
+	return if arr[index] == value then index else nil
+end
 
 -- module
 return table.freeze {
 	ordered_insert = ordered_insert,
 	ordered_remove = ordered_remove,
+	ordered_find = find,
 }

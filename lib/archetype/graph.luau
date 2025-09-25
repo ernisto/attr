@@ -1,6 +1,7 @@
 local utils = require('../utils')
 local ordered_remove = utils.ordered_remove
 local ordered_insert = utils.ordered_insert
+local ordered_find = utils.ordered_find
 
 local key = require('../key')
 local with_removed = key.pre_allocated_storage() -- [attribute]: archetype
@@ -53,6 +54,9 @@ local function match_attributes(attributes: { attribute_id }, required_attribute
 	end
 	return false
 end
+local function has_attribute(archetype: archetype_id, required: attribute_id)
+	return ordered_find(attributes[archetype], required) ~= nil
+end
 
 local function bind_transitions(
 	archetype: archetype_id,
@@ -97,6 +101,10 @@ local function bind_transitions(
 
 		table.insert(archetypes_with_transition_of[extra_attribute], big_archetype)
 	end
+end
+local function bind_transition(base_archetype: archetype_id, attribute: attribute_id, next_archetype: archetype_id)
+	with_added[base_archetype][attribute] = next_archetype
+	with_removed[next_archetype][attribute] = base_archetype
 end
 
 local function next_archetype_with(base_archetype: archetype_id?, new_attribute: attribute_id): archetype_id
@@ -245,11 +253,14 @@ end
 return table.freeze {
 	get_only_1_extra_attribute = get_only_1_extra_attribute,
 	match_attributes = match_attributes,
+	has_attribute = has_attribute,
 	attributes = attributes,
 
 	next_archetype_without = next_archetype_without,
 	next_archetype_with = next_archetype_with,
+
 	bind_transitions = bind_transitions,
+	bind_transition = bind_transition,
 
 	iter_smaller_archetypes = iter_smaller_archetypes,
 	iter_bigger_archetypes = iter_bigger_archetypes,
