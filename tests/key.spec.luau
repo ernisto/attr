@@ -4,16 +4,16 @@ local key = require('@lib/key')
 local run, focus, skip = {}, {}, {}
 
 function run.generate_distinct_positive_ids_for_nil()
-	local a = key.ensure_id()
-	local b = key.ensure_id()
+	local _, a = key.ensure_id()
+	local _, b = key.ensure_id()
 	assert(type(a) == 'number' and a > 0, 'id a should be positive number')
 	assert(type(b) == 'number' and b > 0, 'id b should be positive number')
 	assert(a ~= b, 'ids for nil should be distinct')
 end
 
 function run.accepts_explicit_positive_integer_id()
-	local x = key.ensure_id(42)
-	assert(x == 42, 'explicit integer id should pass through')
+	local _x, x = key.ensure_id(42)
+	assert(_x == 42 and x == 42 + 2 ^ 32, 'explicit integer id should pass through')
 end
 
 function run.rejects_primitive_non_gc_values()
@@ -42,18 +42,20 @@ end
 
 function run.destroy_id_removes_from_attr_storages()
 	local attr = any.new(false)
-	local id = key.ensure_id()
+	local _id, id = key.ensure_id()
+
 	attr:set(id, true)
 	assert(attr:has(id), 'attr should contain id before destroy')
+
 	cleanup.destroy(id)
-	assert(not attr:has(id), 'attr should not contain id after destroy')
+	assert(not attr:has(_id), 'attr should not contain id after destroy')
 end
 
 function run.destroy_id_trigger_on_destroyed()
-	local id = key.ensure_id()
+	local _id, id = key.ensure_id()
 
 	local called = 0
-	cleanup.on_destroy(id, function()
+	cleanup.on_destroy(_id, function()
 		called += 1
 	end)
 
@@ -62,10 +64,10 @@ function run.destroy_id_trigger_on_destroyed()
 end
 
 function run.reuses_freed_ids_from_pool()
-	local id1 = key.ensure_id()
+	local _id1, id1 = key.ensure_id()
 	cleanup.destroy(id1)
-	local id2 = key.ensure_id()
-	assert(id2 == id1, 'new id should reuse freed id')
+	local _id2 = key.ensure_id()
+	assert(_id2 == _id1, 'new id should reuse freed id')
 end
 
 return { run = run, skip = skip, focus = focus }

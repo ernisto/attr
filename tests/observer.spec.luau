@@ -16,12 +16,12 @@ function run.on_add()
 	end)
 
 	-- observers are called when a component is added
-	local id = attr.id()
+	local _, id = attr.id()
 	a:ensure(id)
 	assert(call[1] == id)
 
 	-- observers watches archetypes
-	local id2 = attr.id()
+	local _, id2 = attr.id()
 	b:ensure(id2)
 	assert(call[2] == nil)
 	a:ensure(id2)
@@ -30,7 +30,7 @@ function run.on_add()
 	-- observers can be disconnected
 	attr.destroy(conn)
 
-	local id3 = attr.id()
+	local _, id3 = attr.id()
 	a:ensure(id3)
 	assert(call[3] == nil)
 end
@@ -47,11 +47,11 @@ function run.on_remove()
 	end)
 
 	-- Set up entities with both components
-	local id1 = attr.id()
+	local _, id1 = attr.id()
 	a:ensure(id1) -- This sets the value to 0 (default)
 	b:ensure(id1)
 
-	local id2 = attr.id()
+	local _, id2 = attr.id()
 	a:ensure(id2) -- This sets the value to 0 (default)
 	b:ensure(id2)
 
@@ -87,7 +87,7 @@ function run.on_change()
 	end)
 
 	-- Set up entity with component
-	local id = attr.id()
+	local _, id = attr.id()
 	a:ensure(id)
 
 	-- Change component value should trigger observer
@@ -134,7 +134,7 @@ function run.multiple_observers()
 	end)
 
 	-- Test multiple observers on add
-	local id = attr.id()
+	local _, id = attr.id()
 	a:ensure(id)
 	assert(#add_calls == 2)
 	assert(add_calls[1].observer == 1)
@@ -183,7 +183,7 @@ function run.archetype_transitions()
 		table.insert(remove_calls, { component = 'A', entity = entity })
 	end)
 
-	local id = attr.id()
+	local _, id = attr.id()
 
 	-- Add A component
 	a:ensure(id)
@@ -224,7 +224,7 @@ function run.observer_disconnection()
 	end)
 
 	-- Add component before disconnection
-	local id1 = attr.id()
+	local _, id1 = attr.id()
 	a:ensure(id1)
 	assert(#calls == 1)
 	assert(calls[1] == id1)
@@ -233,7 +233,7 @@ function run.observer_disconnection()
 	attr.destroy(conn)
 
 	-- Add component after disconnection should not trigger
-	local id2 = attr.id()
+	local _, id2 = attr.id()
 	a:ensure(id2)
 	assert(#calls == 1) -- Should still be 1, not 2
 end
@@ -368,10 +368,10 @@ function run.observer_with_composite_archetype()
 		table.insert(calls, { type = 'B+C', entity = entity })
 	end)
 
-	local id1 = attr.id()
-	local id2 = attr.id()
-	local id3 = attr.id()
-	local id4 = attr.id()
+	local _, id1 = attr.id()
+	local _, id2 = attr.id()
+	local _, id3 = attr.id()
+	local _, id4 = attr.id()
 
 	-- Add only A (should not trigger any composite observers)
 	a:ensure(id1)
@@ -425,9 +425,9 @@ function run.observer_with_triple_composite_archetype()
 		table.insert(calls, { type = 'A+B+C', entity = entity })
 	end)
 
-	local id1 = attr.id()
-	local id2 = attr.id()
-	local id3 = attr.id()
+	local _, id1 = attr.id()
+	local _, id2 = attr.id()
+	local _, id3 = attr.id()
 
 	-- Add A only (should not trigger)
 	a:ensure(id1)
@@ -486,7 +486,7 @@ function run.observer_composite_archetype_removal()
 		table.insert(remove_calls, entity)
 	end)
 
-	local id = attr.id()
+	local _, id = attr.id()
 
 	-- Add A only (should not trigger)
 	a:ensure(id)
@@ -531,7 +531,7 @@ function run.observer_composite_archetype_change()
 		table.insert(change_calls, entity)
 	end)
 
-	local id = attr.id()
+	local _, id = attr.id()
 
 	-- Add A+B (should not trigger change on add)
 	a:ensure(id)

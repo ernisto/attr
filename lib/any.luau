@@ -1,6 +1,8 @@
 local archetype = require('./archetype')
 local key = require './key'
 local observer = require('./observer')
+local ensure_id = key.ensure_id
+type key = key.key
 type id = key.id
 
 -- pair(any, player) -> owner(player), replicating(player)
@@ -16,39 +18,39 @@ end
 -- defs
 local attr_default: { [attr]: any } = {}
 export type attr<V = any> = {
-	await_until_destroy: (attr<V>, id) -> V?,
-	assert_await: (attr<V>, id) -> V,
-	assert: (attr<V>, id, message: string?) -> V,
-	find: (attr<V>, id) -> V?,
-	has: (attr<V>, id) -> boolean,
-	swap: (attr<V>, id, id) -> (V?, V?),
+	await_until_destroy: (attr<V>, key) -> V?,
+	assert_await: (attr<V>, key) -> V,
+	assert: (attr<V>, key, message: string?) -> V,
+	find: (attr<V>, key) -> V?,
+	has: (attr<V>, key) -> boolean,
+	swap: (attr<V>, key, key) -> (V?, V?),
 
-	remove: (attr<V>, id) -> (),
-	ensure: (attr<V>, id) -> V,
-	set: (attr<V>, id, V) -> (),
+	remove: (attr<V>, key) -> (),
+	ensure: (attr<V>, key) -> V,
+	set: (attr<V>, key, V) -> (),
 
 	iter: (attr<V>) -> () -> (id, V),
 	all: (attr<V>) -> { [id]: V },
 }
 
 -- methods
-local source_ids = key.source_ids
-local function attr_find<V>(data: attr<V>, key: id): V?
-	return data[key]
+local function attr_find<V>(data: attr<V>, key: key): V?
+	return data[ensure_id(key)]
 end
-local function attr_set<V>(data: attr<V>, id: id, value: V?): ()
-	local attr_id = source_ids[data]
+local function attr_set<V>(data: attr<V>, key: key, value: V?): ()
+	local id, tracked = ensure_id(key)
+	local attr_id = ensure_id(data)
 	local prev_value = data[id]
 
 	if value == nil and prev_value ~= nil then
 		local prev_arch = archetype.get(id)
 		archetype.move_to_without(id, attr_id)
-		observer.fire_remove(id, prev_arch :: any, attr_id)
+		observer.fire_remove(tracked, prev_arch :: any, attr_id)
 	elseif value ~= nil and prev_value == nil then
 		local new_arch = archetype.move_to_with(id, attr_id)
-		observer.fire_add(id, new_arch, attr_id)
+		observer.fire_add(tracked, new_arch, attr_id)
 	else
-		observer.fire_change(id, archetype.get(id) :: any, attr_id)
+		observer.fire_change(tracked, archetype.get(id) :: any, attr_id)
 	end
 	data[id] = value
 end
@@ -56,10 +58,10 @@ local function attr_iter<V>(data: attr<V>) --: () -> (id, V)
 	return pairs(data :: any)
 end
 
-local function attr_has<V>(data: attr<V>, key: id): boolean
+local function attr_has<V>(data: attr<V>, key: key): boolean
 	return data:find(key) ~= nil
 end
-local function attr_ensure<V>(data: attr<V>, key: id): V
+local function attr_ensure<V>(data: attr<V>, key: key): V
 	local value = data:find(key)
 	if value == nil then
 		value = by_default(attr_default[data])
@@ -74,25 +76,25 @@ local function attr_all<V>(data: attr<V>): { [id]: V }
 	end
 	return output
 end
-local function attr_swap<V>(data: attr<V>, id1: id, id2: id): (V?, V?)
-	local v1 = data:find(id1)
-	local v2 = data:find(id2)
-	data:set(id1, v2 :: any)
-	data:set(id2, v1 :: any)
+local function attr_swap<V>(data: attr<V>, key1: key, key2: key): (V?, V?)
+	local v1 = data:find(key1)
+	local v2 = data:find(key2)
+	data:set(key1, v2 :: any)
+	data:set(key2, v1 :: any)
 	return v2, v1
 end
 
-local function attr_assert<V>(data: attr<V>, key: id, message: string?): V
+local function attr_assert<V>(data: attr<V>, key: key, message: string?): V
 	return data:find(key) or error(message or `not found`)
 end
-local function attr_await_until_destroy<V>(data: attr<V>, maybe_destroyed_key: id): V?
-	local key_gen = key.get_reused_amount(maybe_destroyed_key)
-	while key.get_reused_amount(maybe_destroyed_key) == key_gen and not data:has(maybe_destroyed_key) do
+local function attr_await_until_destroy<V>(data: attr<V>, maybe_destroyed_key: any): V?
+	local id = key.ensure_id(maybe_destroyed_key)
+	while key.maybe_alive(id) and not data:has(maybe_destroyed_key) do
 		task.wait()
 	end
 	return data:find(maybe_destroyed_key) :: any
 end
-local function attr_assert_await<V>(data: attr<V>, maybe_destroyed_key: id, message: string?): V
+local function attr_assert_await<V>(data: attr<V>, maybe_destroyed_key: key, message: string?): V
 	return data:await_until_destroy(maybe_destroyed_key) or error(message or `key destroyed before contains {data}`)
 end
 
@@ -118,7 +120,7 @@ table.freeze(attr_impl)
 local function attr_new<V>(default: V): attr<V>
 	local data = setmetatable(key.pre_allocated_storage(), attr_impl) :: any
 	attr_default[data] = default
-	archetype.with_attr(key.ensure_id(data))
+	archetype.with_attr((key.ensure_id(data)))
 	return data
 end
 

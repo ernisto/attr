@@ -10,7 +10,11 @@ local map_attr_iter = map_attr.iter
 local map_attr_set = map_attr.set
 
 local key = require('./key')
+local ensure_id = key.ensure_id
+local maybe_id = key.maybe_ensure_id
 type id = key.id
+
+type key = id | key.tracked_id | key.id_source
 
 -- defs
 local backward_link = setmetatable({}, { __mode = 'kv' }) :: any
@@ -19,8 +23,10 @@ export type linkN<V = any> = map_attr<id, V>
 export type link1<V = any> = attr<id>
 
 -- methods
-local function link11_set<V>(data: link1<V>, key: id, target: id?, value: V?)
+local function link11_set<V>(data: link1<V>, key: key, target_key: key?, value: V?)
 	local prev_target = attr_find(data, key)
+	local target_id, target = maybe_id(target_key)
+
 	attr_set(data, key, target)
 
 	local backward_data = backward_link[data] :: any
@@ -29,58 +35,64 @@ local function link11_set<V>(data: link1<V>, key: id, target: id?, value: V?)
 	if prev_target ~= nil and prev_target ~= target then attr_set(backward_data, prev_target, nil) end
 	if target == nil then return end
 
-	attr_set(backward_data, target, key)
+	attr_set(backward_data, target_id, key)
 end
-local function link1N_set<V>(data: linkN<V>, key: id, target: id?, value: V?)
+local function link1N_set<V>(data: linkN<V>, key: key, target_key: key?, value: V?)
 	local backward_data = backward_link[data] :: any
+	local target_id, target = maybe_id(target_key)
 
 	if target ~= nil then
 		map_attr_set(data, key, target, value)
 		if backward_data == nil then return end
 
-		local prev_key = attr_find(backward_data, target)
+		local prev_key = attr_find(backward_data, target_id)
 		if prev_key then map_attr_set(data, prev_key, target, nil :: any) end
 
-		return attr_set(backward_data, target, value and key)
+		return attr_set(backward_data, target_id, value and key)
 	end
 
 	-- remove all targets for this key; capture then clear
 	if backward_data ~= nil then
 		for prev_target in map_attr_iter(data, key) do
-			attr_set(backward_data, prev_target, nil)
+			attr_set(backward_data, ensure_id(prev_target), nil)
 		end
 	end
 	map_attr_set(data, key, nil, nil)
 end
-local function linkNN_set<V>(data: linkN<V>, key: id, target: id?, value: V?)
+local function linkNN_set<V>(data: linkN<V>, key: key, target_key: key?, value: V?)
 	local backward_data = backward_link[data] :: any
+	local target_id, target = maybe_id(target_key)
 
 	if target ~= nil then
 		map_attr_set(data, key, target, value)
 		if backward_data == nil then return end
 
-		return map_attr_set(backward_data, target, key, value)
+		return map_attr_set(backward_data, target_id, select(2, ensure_id(key)), value)
 	end
 
 	-- remove all targets for this key; capture then clear
 	if backward_data ~= nil then
 		for prev_target in map_attr_iter(data, key) do
-			map_attr_set(backward_data, prev_target, key, nil)
+			map_attr_set(backward_data, ensure_id(prev_target), select(2, ensure_id(key)), nil)
 		end
 	end
 	map_attr_set(data, key, nil, nil)
 end
-local function linkN1_set<V>(data: link1<V>, key: id, target: id?, value: V?)
+local function linkN1_set<V>(data: link1<V>, key: key, target_key: key?, value: V?)
 	local prev_target = attr_find(data, key)
+	local target_id, target = maybe_id(target_key)
+
 	attr_set(data, key, target)
 
 	local backward_data = backward_link[data] :: any
 	if backward_data == nil then return end
 
-	if prev_target ~= nil and prev_target ~= target then map_attr_set(backward_data, prev_target, key, nil :: any) end
+	if prev_target ~= nil and prev_target ~= target then
+		map_attr_set(backward_data, ensure_id(prev_target), select(2, ensure_id(key)), nil :: any)
+	end
 	if target == nil then return end
 
-	map_attr_set(backward_data, target, key, value or target)
+	map_attr_set(backward_data, target_id, select(2, ensure_id(key)), value or target)
 end
 
 -- local function iter_descendants<V>(data: linkN<V>, key: id): () -> (id, V)
@@ -163,8 +175,8 @@ local function link_NN<V>(default: V): (linkN<V>, linkN<V>)
 	backward_link[forward] = backward
 	backward_link[backward] = forward
 
-	archetype.with_attr(key.ensure_id(forward))
-	archetype.with_attr(key.ensure_id(backward))
+	archetype.with_attr((key.ensure_id(forward)))
+	archetype.with_attr((key.ensure_id(backward)))
 	return forward, backward
 end
 local function link_N1<V>(default: V): (link1<V>, linkN<V>)

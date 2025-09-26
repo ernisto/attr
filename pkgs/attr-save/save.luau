@@ -27,7 +27,8 @@ local function include_id(handler: attr.id, attribute: attr.link1_attr<any>, key
 	return child_handler
 end
 
-local function save(root_handler: attr.id, root: attr.id): data
+local function save(root_handler: attr.id, root_key: attr.key): data
+	local _, root = attr.id(root_key)
 	local internal_ids = { [root] = 1 }
 	local data = {}
 
@@ -35,7 +36,7 @@ local function save(root_handler: attr.id, root: attr.id): data
 	local pending_ids = { root }
 
 	local entities_count = 1
-	local function get_internal_id(real_id)
+	local function get_internal_id(real_id: attr.tracked_id): number
 		local internal_id = internal_ids[real_id]
 		if internal_id then return internal_id end
 
@@ -89,10 +90,15 @@ local function save(root_handler: attr.id, root: attr.id): data
 	end
 	return data
 end
-local function load(root_handler: attr.id, data: data, root: attr.id?): { attr.id }
-	local real_ids = { root :: attr.id }
+local function load(root_handler: attr.id, data: data, root_key: attr.key?): { attr.id }
+	local root_id, root = attr.id(root_key)
+	local real_ids = { root_id }
+	local tracked_real_ids = { root }
+
 	for internal_id in data do
-		real_ids[internal_id] = real_ids[internal_id] or attr.id()
+		local id, tracked = attr.id()
+		real_ids[internal_id] = id
+		tracked_real_ids[internal_id] = tracked
 	end
 
 	local pending_ids = { 1 }
@@ -100,14 +106,15 @@ local function load(root_handler: attr.id, data: data, root: attr.id?): { attr.i
 	for index, internal_id in pending_ids do
 		local handler_id = pending_handler_id[index]
 		local real_id = real_ids[internal_id]
+		local tracked_real_id = tracked_real_ids[internal_id]
 		local entity_data = data[internal_id] or {}
 
 		for attribute, key in saving_attributes:all(handler_id) do
 			local attr_serde = saving_serde:find(attribute)
-			local value = entity_data[key] or attr_serde and attr_serde.default and attr_serde.default(real_id)
+			local value = entity_data[key] or attr_serde and attr_serde.default and attr_serde.default(tracked_real_id)
 
 			if value == nil then continue end
-			local attr_value = if attr_serde then serde.deserialize(real_id, attr_serde, value) else value
+			local attr_value = if attr_serde then serde.deserialize(tracked_real_id, attr_serde, value) else value
 
 			assert(attr.id_source(attribute)):set(real_id, attr_value)
 			entity_data[key] = nil
@@ -142,7 +149,7 @@ local function load(root_handler: attr.id, data: data, root: attr.id?): { attr.i
 			entity_data[key] = nil
 		end
 	end
-	return real_ids
+	return tracked_real_ids
 end
 
 -- module

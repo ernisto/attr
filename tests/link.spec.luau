@@ -5,8 +5,8 @@ local run, focus, skip = {}, {}, {}
 
 function run.link_11_sets_and_syncs_both_sides()
 	local a_to_b, b_to_a = link.link_11(true)
-	local a = key.ensure_id()
-	local b = key.ensure_id()
+	local _, a = key.ensure_id()
+	local _, b = key.ensure_id()
 
 	-- set forward (types for link1 use set(id, value=id))
 	a_to_b:set(a, b)
@@ -14,7 +14,7 @@ function run.link_11_sets_and_syncs_both_sides()
 	assert(b_to_a:find(b) == a, 'b should back-link to a')
 
 	-- change link
-	local c = key.ensure_id()
+	local _, c = key.ensure_id()
 	a_to_b:set(a, c)
 	assert(a_to_b:find(a) == c, 'a should link to c now')
 	assert(b_to_a:find(c) == a, 'c should back-link to a')
@@ -28,9 +28,9 @@ end
 
 function run.link_1N_enforces_single_backlink()
 	local a_to_bs, b_to_a = link.link_1N(true)
-	local a1 = key.ensure_id()
-	local a2 = key.ensure_id()
-	local b = key.ensure_id()
+	local _, a1 = key.ensure_id()
+	local _, a2 = key.ensure_id()
+	local _, b = key.ensure_id()
 
 	-- add b under a1
 	a_to_bs:set(a1, b, true)
@@ -44,14 +44,14 @@ end
 
 function run.link_NN_syncs_both_directions()
 	local a_to_bs, b_to_as = link.link_NN(true)
-	local a = key.ensure_id()
-	local b1 = key.ensure_id()
-	local b2 = key.ensure_id()
+	local _, a = key.ensure_id()
+	local _, b1 = key.ensure_id()
+	local _, b2 = key.ensure_id()
 
 	a_to_bs:set(a, b1, true)
 	a_to_bs:set(a, b2, true)
-	assert(b_to_as:find(b1, a) == true, 'b1 has backlink to a')
-	assert(b_to_as:find(b2, a) == true, 'b2 has backlink to a')
+	assert(b_to_as:find(b1, a), 'b1 has backlink to a')
+	assert(b_to_as:find(b2, a), 'b2 has backlink to a')
 
 	-- remove one link
 	a_to_bs:set(a, b1, nil)
@@ -61,12 +61,12 @@ end
 
 function run.link_N1_is_inverse_of_1N()
 	local As_B, B_As = link.link_N1(true)
-	local a1 = key.ensure_id()
-	local b = key.ensure_id()
+	local _, a1 = key.ensure_id()
+	local _, b = key.ensure_id()
 
 	As_B:set(a1, b)
 	assert(As_B:has(a1), 'removed 1 target')
-	assert(B_As:has(b, a1) == true, 'backwards contains a1')
+	assert(B_As:has(b, a1), 'backwards contains a1')
 
 	As_B:remove(a1)
 	assert(not As_B:has(a1), 'removed 1 target')
@@ -75,8 +75,8 @@ end
 
 function run.link_removal_on_destroy_id()
 	local a_to_b, b_to_a = link.link_11(true)
-	local a = key.ensure_id()
-	local b = key.ensure_id()
+	local _, a = key.ensure_id()
+	local _, b = key.ensure_id()
 
 	a_to_b:set(a, b)
 	assert(a_to_b:find(a) ~= nil, 'link set')
@@ -91,8 +91,8 @@ end
 
 function run.link_11_removes_when_target_destroyed()
 	local a_to_b, b_to_a = link.link_11(true)
-	local a = key.ensure_id()
-	local b = key.ensure_id()
+	local _, a = key.ensure_id()
+	local _, b = key.ensure_id()
 
 	a_to_b:set(a, b)
 	assert(a_to_b:find(a) == b, 'a -> b set')
@@ -105,9 +105,9 @@ end
 
 function run.link_1N_removes_when_source_destroyed()
 	local a_to_bs, b_to_a = link.link_1N(true)
-	local a = key.ensure_id()
-	local b1 = key.ensure_id()
-	local b2 = key.ensure_id()
+	local _, a = key.ensure_id()
+	local _, b1 = key.ensure_id()
+	local _, b2 = key.ensure_id()
 
 	a_to_bs:set(a, b1, true)
 	a_to_bs:set(a, b2, true)
@@ -123,14 +123,14 @@ end
 
 function run.link_1N_removes_when_target_destroyed()
 	local a_to_bs, b_to_a = link.link_1N(true)
-	local a1 = key.ensure_id()
-	local a2 = key.ensure_id()
-	local b = key.ensure_id()
+	local _, a1 = key.ensure_id()
+	local _, a2 = key.ensure_id()
+	local _, b = key.ensure_id()
 
 	a_to_bs:set(a1, b, true)
 	a_to_bs:set(a2, b, true)
 	assert(a_to_bs:find(a1, b) == nil, 'moved to a2 only')
-	assert(a_to_bs:find(a2, b) == true, 'set under a2')
+	assert(a_to_bs:find(a2, b), 'set under a2')
 	assert(b_to_a:find(b) == a2, 'backlink to a2')
 
 	cleanup.destroy(b)
@@ -140,14 +140,14 @@ end
 
 function run.link_N1_removes_when_source_destroyed()
 	local As_B, B_As = link.link_N1(true)
-	local a = key.ensure_id()
-	local b1 = key.ensure_id()
-	local b2 = key.ensure_id()
+	local _, a = key.ensure_id()
+	local _, b1 = key.ensure_id()
+	local _, b2 = key.ensure_id()
 
 	As_B:set(a, b1)
 	As_B:set(a, b2)
 	assert(not B_As:has(b1, a), 'b1 should not contain a after move')
-	assert(B_As:has(b2, a) == true, 'back contains a under b2')
+	assert(B_As:has(b2, a), 'back contains a under b2')
 
 	cleanup.destroy(a)
 	assert(As_B:find(a) == nil, 'forward cleared on destroy(a)')
@@ -157,13 +157,13 @@ end
 
 function run.link_N1_removes_when_target_destroyed()
 	local As_B, B_As = link.link_N1(true)
-	local a1 = key.ensure_id()
-	local a2 = key.ensure_id()
-	local b = key.ensure_id()
+	local _, a1 = key.ensure_id()
+	local _, a2 = key.ensure_id()
+	local _, b = key.ensure_id()
 
 	As_B:set(a1, b)
 	As_B:set(a2, b)
-	assert(B_As:has(b, a2) == true, 'back contains a2 for b')
+	assert(B_As:has(b, a2), 'back contains a2 for b')
 
 	cleanup.destroy(b)
 	assert(As_B:find(a1) == nil, 'a1 cleared when b destroyed')
@@ -173,14 +173,14 @@ end
 
 function run.link_NN_removes_when_source_destroyed()
 	local a_to_bs, b_to_as = link.link_NN(true)
-	local a = key.ensure_id()
-	local b1 = key.ensure_id()
-	local b2 = key.ensure_id()
+	local _, a = key.ensure_id()
+	local _, b1 = key.ensure_id()
+	local _, b2 = key.ensure_id()
 
 	a_to_bs:set(a, b1, true)
 	a_to_bs:set(a, b2, true)
-	assert(b_to_as:find(b1, a) == true, 'b1 backlink set')
-	assert(b_to_as:find(b2, a) == true, 'b2 backlink set')
+	assert(b_to_as:find(b1, a), 'b1 backlink set')
+	assert(b_to_as:find(b2, a), 'b2 backlink set')
 
 	cleanup.destroy(a)
 	assert(a_to_bs:find(a, b1) == nil, 'forward b1 removed on destroy(a)')
@@ -191,14 +191,14 @@ end
 
 function run.link_NN_removes_when_target_destroyed()
 	local a_to_bs, b_to_as = link.link_NN(true)
-	local a1 = key.ensure_id()
-	local a2 = key.ensure_id()
-	local b = key.ensure_id()
+	local _, a1 = key.ensure_id()
+	local _, a2 = key.ensure_id()
+	local _, b = key.ensure_id()
 
 	a_to_bs:set(a1, b, true)
 	a_to_bs:set(a2, b, true)
-	assert(b_to_as:find(b, a1) == true, 'back contains a1')
-	assert(b_to_as:find(b, a2) == true, 'back contains a2')
+	assert(b_to_as:find(b, a1), 'back contains a1')
+	assert(b_to_as:find(b, a2), 'back contains a2')
 
 	cleanup.destroy(b)
 	assert(a_to_bs:find(a1, b) == nil, 'a1 -> b removed on destroy(b)')
