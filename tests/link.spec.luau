@@ -1,6 +1,6 @@
-local cleanup = require('../lib/cleanup')
-local key = require('@lib/key')
-local link = require('@lib/link')
+local cleanup = require '@lib/cleanup'
+local key = require '@lib/key'
+local link = require '@lib/link'
 local run, focus, skip = {}, {}, {}
 
 function run.link_11_sets_and_syncs_both_sides()

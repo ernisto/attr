@@ -27,6 +27,8 @@
     "**/.pesde/**": true
   },
   "luau-lsp.platform.type": "standard",
+  "luau-lsp.sourcemap.enabled": false,
+  "luau-lsp.plugin.enabled": false,
   "luau-lsp.bytecode.vectorCtor": "create",
   "luau-lsp.bytecode.vectorLib": "vector",
   "luau-lsp.bytecode.vectorType": "vector",

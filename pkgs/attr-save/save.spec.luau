@@ -1,5 +1,5 @@
-local attr = require('../../lib')
-local save = require('./save')
+local attr = require '@lib'
+local save = require './save'
 
 local focus = {}
 local run = {}

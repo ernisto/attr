@@ -1,7 +1,7 @@
 --!nolint LocalUnused
 
-local archetype = require('../lib/archetype')
-local attr = require '../lib'
+local archetype = require '@lib/archetype'
+local attr = require '@lib'
 
 local run = {}
 
@@ -11,27 +11,27 @@ function run.on_add()
 	local A = attr.id(a)
 
 	local call = {}
-	local conn = attr.on_add(A, function(entity)
+	local disconnect = attr.on_add(A, function(entity)
 		table.insert(call, entity)
 	end)
 
 	-- observers are called when a component is added
 	local _, id = attr.id()
-	a:ensure(id)
+	a:add(id)
 	assert(call[1] == id)
 
 	-- observers watches archetypes
 	local _, id2 = attr.id()
-	b:ensure(id2)
+	b:add(id2)
 	assert(call[2] == nil)
-	a:ensure(id2)
+	a:add(id2)
 	assert(call[2] == id2)
 
 	-- observers can be disconnected
-	attr.destroy(conn)
+	disconnect()
 
 	local _, id3 = attr.id()
-	a:ensure(id3)
+	a:add(id3)
 	assert(call[3] == nil)
 end
 
@@ -42,18 +42,18 @@ function run.on_remove()
 	local B = attr.id(b)
 
 	local remove_calls = {}
-	local conn = attr.on_remove(A, function(entity)
+	local disconnect = attr.on_remove(A, function(entity)
 		table.insert(remove_calls, entity)
 	end)
 
 	-- Set up entities with both components
 	local _, id1 = attr.id()
-	a:ensure(id1) -- This sets the value to 0 (default)
-	b:ensure(id1)
+	a:add(id1) -- This sets the value to 0 (default)
+	b:add(id1)
 
 	local _, id2 = attr.id()
-	a:ensure(id2) -- This sets the value to 0 (default)
-	b:ensure(id2)
+	a:add(id2) -- This sets the value to 0 (default)
+	b:add(id2)
 
 	-- Remove component A from first entity
 	a:remove(id1) -- This should trigger remove observer
@@ -70,7 +70,7 @@ function run.on_remove()
 	assert(#remove_calls == 2, 'Expected 2 remove calls after B removal, got ' .. #remove_calls)
 
 	-- Disconnect observer
-	attr.destroy(conn)
+	disconnect()
 
 	-- Remove A from remaining entity should not trigger
 	a:remove(id2)
@@ -82,13 +82,13 @@ function run.on_change()
 	local A = attr.id(a)
 
 	local change_calls = {}
-	local conn = attr.on_change(A, function(entity)
+	local disconnect = attr.on_change(A, function(entity)
 		table.insert(change_calls, entity)
 	end)
 
 	-- Set up entity with component
 	local _, id = attr.id()
-	a:ensure(id)
+	a:add(id)
 
 	-- Change component value should trigger observer
 	a:set(id, 5)
@@ -99,7 +99,7 @@ function run.on_change()
 	assert(change_calls[2] == id)
 
 	-- Disconnect observer
-	attr.destroy(conn)
+	disconnect()
 
 	-- Change should not trigger after disconnection
 	a:set(id, 15)
@@ -117,25 +117,25 @@ function run.multiple_observers()
 	local change_calls = {}
 
 	-- Set up multiple observers
-	local conn1 = attr.on_add(A, function(entity)
+	local disconnect1 = attr.on_add(A, function(entity)
 		table.insert(add_calls, { observer = 1, entity = entity })
 	end)
 
-	local conn2 = attr.on_add(A, function(entity)
+	local disconnect2 = attr.on_add(A, function(entity)
 		table.insert(add_calls, { observer = 2, entity = entity })
 	end)
 
-	local conn3 = attr.on_remove(A, function(entity)
+	local disconnect3 = attr.on_remove(A, function(entity)
 		table.insert(remove_calls, { observer = 3, entity = entity })
 	end)
 
-	local conn4 = attr.on_change(A, function(entity)
+	local disconnect4 = attr.on_change(A, function(entity)
 		table.insert(change_calls, { observer = 4, entity = entity })
 	end)
 
 	-- Test multiple observers on add
 	local _, id = attr.id()
-	a:ensure(id)
+	a:add(id)
 	assert(#add_calls == 2)
 	assert(add_calls[1].observer == 1)
 	assert(add_calls[2].observer == 2)
@@ -151,10 +151,10 @@ function run.multiple_observers()
 	assert(remove_calls[1].observer == 3)
 
 	-- Clean up
-	attr.destroy(conn1)
-	attr.destroy(conn2)
-	attr.destroy(conn3)
-	attr.destroy(conn4)
+	disconnect1()
+	disconnect2()
+	disconnect3()
+	disconnect4()
 end
 
 function run.archetype_transitions()
@@ -169,34 +169,34 @@ function run.archetype_transitions()
 	local remove_calls = {}
 
 	-- Observer for A component
-	local conn_a = attr.on_add(A, function(entity)
+	local disconnect_a = attr.on_add(A, function(entity)
 		table.insert(add_calls, { component = 'A', entity = entity })
 	end)
 
 	-- Observer for B component
-	local conn_b = attr.on_add(B, function(entity)
+	local disconnect_b = attr.on_add(B, function(entity)
 		table.insert(add_calls, { component = 'B', entity = entity })
 	end)
 
 	-- Observer for A removal
-	local conn_remove_a = attr.on_remove(A, function(entity)
+	local disconnect_remove_a = attr.on_remove(A, function(entity)
 		table.insert(remove_calls, { component = 'A', entity = entity })
 	end)
 
 	local _, id = attr.id()
 
 	-- Add A component
-	a:ensure(id)
+	a:add(id)
 	assert(#add_calls == 1)
 	assert(add_calls[1].component == 'A')
 
 	-- Add B component (entity now has A+B archetype)
-	b:ensure(id)
+	b:add(id)
 	assert(#add_calls == 2)
 	assert(add_calls[2].component == 'B')
 
 	-- Add C component (entity now has A+B+C archetype)
-	c:ensure(id)
+	c:add(id)
 	assert(#add_calls == 2) -- No observer for C
 
 	-- Remove A component (entity transitions to B+C archetype)
@@ -209,9 +209,9 @@ function run.archetype_transitions()
 	assert(#remove_calls == 1, 'Expected 1 remove call after B removal, got ' .. #remove_calls) -- No observer for B removal
 
 	-- Clean up
-	attr.destroy(conn_a)
-	attr.destroy(conn_b)
-	attr.destroy(conn_remove_a)
+	disconnect_a()
+	disconnect_b()
+	disconnect_remove_a()
 end
 
 function run.observer_disconnection()
@@ -219,22 +219,22 @@ function run.observer_disconnection()
 	local A = attr.id(a)
 
 	local calls = {}
-	local conn = attr.on_add(A, function(entity)
+	local disconnect = attr.on_add(A, function(entity)
 		table.insert(calls, entity)
 	end)
 
 	-- Add component before disconnection
 	local _, id1 = attr.id()
-	a:ensure(id1)
+	a:add(id1)
 	assert(#calls == 1)
 	assert(calls[1] == id1)
 
 	-- Disconnect observer
-	attr.destroy(conn)
+	disconnect()
 
 	-- Add component after disconnection should not trigger
 	local _, id2 = attr.id()
-	a:ensure(id2)
+	a:add(id2)
 	assert(#calls == 1) -- Should still be 1, not 2
 end
 
@@ -249,17 +249,17 @@ function run.observer_with_different_archetypes()
 	local calls = {}
 
 	-- Observer for A archetype
-	local conn_a = attr.on_add(A, function(entity)
+	local disconnect_a = attr.on_add(A, function(entity)
 		table.insert(calls, { type = 'A', entity = entity })
 	end)
 
 	-- Observer for B archetype
-	local conn_b = attr.on_add(B, function(entity)
+	local disconnect_b = attr.on_add(B, function(entity)
 		table.insert(calls, { type = 'B', entity = entity })
 	end)
 
 	-- Observer for C archetype
-	local conn_c = attr.on_add(C, function(entity)
+	local disconnect_c = attr.on_add(C, function(entity)
 		table.insert(calls, { type = 'C', entity = entity })
 	end)
 
@@ -268,32 +268,32 @@ function run.observer_with_different_archetypes()
 	local id3 = attr.id()
 
 	-- Add only A component
-	a:ensure(id1)
+	a:add(id1)
 	assert(#calls == 1)
 	assert(calls[1].type == 'A')
 
 	-- Add only B component
-	b:ensure(id2)
+	b:add(id2)
 	assert(#calls == 2)
 	assert(calls[2].type == 'B')
 
 	-- Add only C component
-	c:ensure(id3)
+	c:add(id3)
 	assert(#calls == 3)
 	assert(calls[3].type == 'C')
 
 	-- Add A+B to same entity
 	local id4 = attr.id()
-	a:ensure(id4)
-	b:ensure(id4)
+	a:add(id4)
+	b:add(id4)
 	assert(#calls == 5) -- Should trigger both A and B observers
 	assert(calls[4].type == 'A')
 	assert(calls[5].type == 'B')
 
 	-- Clean up
-	attr.destroy(conn_a)
-	attr.destroy(conn_b)
-	attr.destroy(conn_c)
+	disconnect_a()
+	disconnect_b()
+	disconnect_c()
 end
 
 function run.observer_with_archetype_hierarchy()
@@ -305,12 +305,12 @@ function run.observer_with_archetype_hierarchy()
 	local calls = {}
 
 	-- Observer for A archetype (should catch entities with A or A+B)
-	local conn_a = attr.on_add(A, function(entity)
+	local disconnect_a = attr.on_add(A, function(entity)
 		table.insert(calls, { type = 'A', entity = entity })
 	end)
 
 	-- Observer for B archetype (should catch entities with B or A+B)
-	local conn_b = attr.on_add(B, function(entity)
+	local disconnect_b = attr.on_add(B, function(entity)
 		table.insert(calls, { type = 'B', entity = entity })
 	end)
 
@@ -319,25 +319,25 @@ function run.observer_with_archetype_hierarchy()
 	local id3 = attr.id()
 
 	-- Add A only
-	a:ensure(id1)
+	a:add(id1)
 	assert(#calls == 1)
 	assert(calls[1].type == 'A')
 
 	-- Add B only
-	b:ensure(id2)
+	b:add(id2)
 	assert(#calls == 2)
 	assert(calls[2].type == 'B')
 
 	-- Add A+B (should trigger both observers)
-	a:ensure(id3)
-	b:ensure(id3)
+	a:add(id3)
+	b:add(id3)
 	assert(#calls == 4) -- A observer + B observer
 	assert(calls[3].type == 'A')
 	assert(calls[4].type == 'B')
 
 	-- Clean up
-	attr.destroy(conn_a)
-	attr.destroy(conn_b)
+	disconnect_a()
+	disconnect_b()
 end
 
 function run.observer_with_composite_archetype()
@@ -352,19 +352,19 @@ function run.observer_with_composite_archetype()
 
 	-- Observer for A+B archetype (should only catch entities with both A and B)
 	local AB_archetype = archetype.with_attr(A, B)
-	local conn_ab = attr.on_add(AB_archetype, function(entity)
+	local disconnect_ab = attr.on_add(AB_archetype, function(entity)
 		table.insert(calls, { type = 'A+B', entity = entity })
 	end)
 
 	-- Observer for A+C archetype (should only catch entities with both A and C)
 	local AC_archetype = archetype.with_attr(A, C)
-	local conn_ac = attr.on_add(AC_archetype, function(entity)
+	local disconnect_ac = attr.on_add(AC_archetype, function(entity)
 		table.insert(calls, { type = 'A+C', entity = entity })
 	end)
 
 	-- Observer for B+C archetype (should only catch entities with both B and C)
 	local BC_archetype = archetype.with_attr(B, C)
-	local conn_bc = attr.on_add(BC_archetype, function(entity)
+	local disconnect_bc = attr.on_add(BC_archetype, function(entity)
 		table.insert(calls, { type = 'B+C', entity = entity })
 	end)
 
@@ -374,29 +374,29 @@ function run.observer_with_composite_archetype()
 	local _, id4 = attr.id()
 
 	-- Add only A (should not trigger any composite observers)
-	a:ensure(id1)
+	a:add(id1)
 	assert(#calls == 0)
 
 	-- Add only B (should not trigger any composite observers)
-	b:ensure(id2)
+	b:add(id2)
 	assert(#calls == 0)
 
 	-- Add A+B (should trigger A+B observer)
-	a:ensure(id2) -- id2 now has A+B
+	a:add(id2) -- id2 now has A+B
 	assert(#calls == 1)
 	assert(calls[1].type == 'A+B')
 	assert(calls[1].entity == id2)
 
 	-- Add A+C (should trigger A+C observer)
-	a:ensure(id3)
-	c:ensure(id3) -- id3 now has A+C
+	a:add(id3)
+	c:add(id3) -- id3 now has A+C
 	assert(#calls == 2)
 	assert(calls[2].type == 'A+C')
 	assert(calls[2].entity == id3)
 
 	-- Add B+C (should trigger B+C observer)
-	b:ensure(id4)
-	c:ensure(id4) -- id4 now has B+C
+	b:add(id4)
+	c:add(id4) -- id4 now has B+C
 	assert(#calls == 3)
 	assert(calls[3].type == 'B+C')
 	assert(calls[3].entity == id4)
@@ -404,9 +404,9 @@ function run.observer_with_composite_archetype()
 	assert(#calls == 3)
 
 	-- Clean up
-	attr.destroy(conn_ab)
-	attr.destroy(conn_ac)
-	attr.destroy(conn_bc)
+	disconnect_ab()
+	disconnect_ac()
+	disconnect_bc()
 end
 
 function run.observer_with_triple_composite_archetype()
@@ -421,7 +421,7 @@ function run.observer_with_triple_composite_archetype()
 
 	-- Observer for A+B+C archetype (should only catch entities with all three)
 	local ABC_archetype = archetype.with_attr(A, B, C)
-	local conn_abc = attr.on_add(ABC_archetype, function(entity)
+	local disconnect_abc = attr.on_add(ABC_archetype, function(entity)
 		table.insert(calls, { type = 'A+B+C', entity = entity })
 	end)
 
@@ -430,40 +430,40 @@ function run.observer_with_triple_composite_archetype()
 	local _, id3 = attr.id()
 
 	-- Add A only (should not trigger)
-	a:ensure(id1)
+	a:add(id1)
 	assert(#calls == 0)
 
 	-- Add A+B (should not trigger)
-	b:ensure(id1)
+	b:add(id1)
 	assert(#calls == 0)
 
 	-- Add A+B+C (should trigger)
-	c:ensure(id1)
+	c:add(id1)
 	assert(#calls == 1)
 	assert(calls[1].type == 'A+B+C')
 	assert(calls[1].entity == id1)
 
 	-- Add A+B to another entity (should not trigger)
-	a:ensure(id2)
-	b:ensure(id2)
+	a:add(id2)
+	b:add(id2)
 	assert(#calls == 1) -- Still only 1
 
 	-- Add C to make it A+B+C (should trigger)
-	c:ensure(id2)
+	c:add(id2)
 	assert(#calls == 2)
 	assert(calls[2].type == 'A+B+C')
 	assert(calls[2].entity == id2)
 
 	-- Add A+B+C directly to third entity (should trigger)
-	a:ensure(id3)
-	b:ensure(id3)
-	c:ensure(id3)
+	a:add(id3)
+	b:add(id3)
+	c:add(id3)
 	assert(#calls == 3)
 	assert(calls[3].type == 'A+B+C')
 	assert(calls[3].entity == id3)
 
 	-- Clean up
-	attr.destroy(conn_abc)
+	disconnect_abc()
 end
 
 function run.observer_composite_archetype_removal()
@@ -477,23 +477,23 @@ function run.observer_composite_archetype_removal()
 
 	-- Observer for A+B archetype additions
 	local AB_archetype = archetype.with_attr(A, B)
-	local conn_add = attr.on_add(AB_archetype, function(entity)
+	local disconnect_add = attr.on_add(AB_archetype, function(entity)
 		table.insert(add_calls, entity)
 	end)
 
 	-- Observer for A+B archetype removals
-	local conn_remove = attr.on_remove(AB_archetype, function(entity)
+	local disconnect_remove = attr.on_remove(AB_archetype, function(entity)
 		table.insert(remove_calls, entity)
 	end)
 
 	local _, id = attr.id()
 
 	-- Add A only (should not trigger)
-	a:ensure(id)
+	a:add(id)
 	assert(#add_calls == 0)
 
 	-- Add B to make A+B (should trigger add)
-	b:ensure(id)
+	b:add(id)
 	assert(#add_calls == 1)
 	assert(add_calls[1] == id)
 
@@ -503,7 +503,7 @@ function run.observer_composite_archetype_removal()
 	assert(remove_calls[1] == id)
 
 	-- Add A back to make A+B again (should trigger add)
-	a:ensure(id)
+	a:add(id)
 	assert(#add_calls == 2)
 	assert(add_calls[2] == id)
 
@@ -513,8 +513,8 @@ function run.observer_composite_archetype_removal()
 	assert(remove_calls[2] == id)
 
 	-- Clean up
-	attr.destroy(conn_add)
-	attr.destroy(conn_remove)
+	disconnect_add()
+	disconnect_remove()
 end
 
 function run.observer_composite_archetype_change()
@@ -527,15 +527,15 @@ function run.observer_composite_archetype_change()
 
 	-- Observer for A+B archetype changes
 	local AB_archetype = archetype.with_attr(A, B)
-	local conn_change = attr.on_change(AB_archetype, function(entity)
+	local disconnect_change = attr.on_change(AB_archetype, function(entity)
 		table.insert(change_calls, entity)
 	end)
 
 	local _, id = attr.id()
 
 	-- Add A+B (should not trigger change on add)
-	a:ensure(id)
-	b:ensure(id)
+	a:add(id)
+	b:add(id)
 	assert(#change_calls == 0)
 
 	-- Change A value (should trigger change)
@@ -554,7 +554,7 @@ function run.observer_composite_archetype_change()
 	assert(change_calls[3] == id)
 
 	-- Clean up
-	attr.destroy(conn_change)
+	disconnect_change()
 end
 
 return run

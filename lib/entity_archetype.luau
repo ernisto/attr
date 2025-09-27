@@ -1,21 +1,28 @@
-local key = require('./key')
+local key = require './key'
 local current_archetype = key.pre_allocated_storage() -- archetype
 local head_id = key.pre_allocated_storage()
 local next_id = key.pre_allocated_storage()
 local prev_id = key.pre_allocated_storage()
-local id_sources = key.id_sources
+local maybe_source = key.maybe_source
+local free_id = key.free_id
 local alive = key.unsafe_alive
 
-local graph = require('@self/graph')
+local archetype_event = require './archetype_event'
+local fire_removed_event = archetype_event.fire_remove
+local fire_added_event = archetype_event.fire_add
+
+local graph = require './archetype'
 local next_archetype_without = graph.next_archetype_without
 local next_archetype_with = graph.next_archetype_with
 local archetype_has_attribute = graph.has_attribute
+local reset_transitions = graph.reset_transitions
+local match_attributes = graph.match_attributes
 local attributes = graph.attributes
 
 -- defs
 type archetype_id = key.id
 type attribute_id = key.id
-type entity_id = key.id
+type entity_id = key.tracked_id
 
 -- functions
 local function iter_entities(root_archetype: archetype_id, exclude: { [attribute_id]: true }?): () -> key.tracked_id?
@@ -36,13 +43,6 @@ local function iter_entities(root_archetype: archetype_id, exclude: { [attribute
 		next_entity = next_entity and next_id[alive(next_entity)]
 		return entity
 	end
-end
-local function get_archetype_with(...: attribute_id): archetype_id
-	local archetype = nil :: any
-	for _, next_attribute in { ... } do
-		archetype = graph.next_archetype_with(archetype, next_attribute)
-	end
-	return archetype
 end
 
 local function remove_archetype_entity(archetype: archetype_id, entity: key.tracked_id)
@@ -73,11 +73,14 @@ end
 local function get_entity_archetype(id: entity_id): archetype_id?
 	return current_archetype[alive(id)]
 end
+
 local function move_entity_to_with(entity: key.tracked_id, added: attribute_id): archetype_id
 	local prev_archetype = get_entity_archetype(entity)
 	local new_archetype = next_archetype_with(prev_archetype, added)
 
 	set_entity_archetype(entity, new_archetype, prev_archetype)
+	fire_added_event(entity, new_archetype, added)
+
 	return new_archetype
 end
 local function move_entity_to_without(entity: key.tracked_id, removed: attribute_id): archetype_id
@@ -85,6 +88,8 @@ local function move_entity_to_without(entity: key.tracked_id, removed: attribute
 	local new_archetype = next_archetype_without(prev_archetype, removed)
 
 	set_entity_archetype(entity, new_archetype, prev_archetype)
+	fire_removed_event(entity, prev_archetype, removed)
+
 	return prev_archetype
 end
 
@@ -93,7 +98,7 @@ local function entity_is_a(entity: key.tracked_id, base_archetype: archetype_id)
 	if archetype == nil then return false end
 	if archetype == base_archetype then return true end
 
-	return graph.match_attributes(attributes[archetype], attributes[base_archetype])
+	return match_attributes(attributes[archetype], attributes[base_archetype])
 end
 local function get_entity_attrs(entity: key.tracked_id): { attribute_id }
 	local archetype = get_entity_archetype(entity)
@@ -110,19 +115,38 @@ local function remove_entity_archetype(entity: key.tracked_id)
 
 	local id = alive(entity)
 	for _, attribute in attributes[archetype] do
-		local data = id_sources[attribute] :: any
-		if data then data:remove(id) end
+		local data = maybe_source(attribute)
+		if data ~= nil then data:remove(id) end
 	end
 	set_entity_archetype(entity, nil, archetype)
 end
 local function destroy_attribute(attribute: attribute_id)
-	local data = id_sources[attribute] :: any
-	if data ~= nil then
+	local data = maybe_source(attribute)
+	local remove = data and data.remove
+
+	if remove ~= nil then
 		for id in iter_entities(attribute) do
-			data:remove(id)
+			remove(data, id)
 		end
 	end
-	graph.destroy(attribute)
+
+	local bigger_archetypes = {}
+	for archetype in graph.iter_bigger_archetypes(attribute) do
+		table.insert(bigger_archetypes, archetype)
+	end
+
+	for _, archetype in bigger_archetypes do
+		local connections = archetype_event.connection_roots[archetype]
+		if connections == nil then return end
+
+		for _, disconnect in connections do
+			disconnect()
+		end
+
+		head_id[archetype] = nil
+		reset_transitions(archetype)
+		free_id(archetype)
+	end
 end
 
 -- module
@@ -131,7 +155,6 @@ return table.freeze {
 	iter_bigger_archetypes = graph.iter_bigger_archetypes,
 
 	iter_entities = iter_entities,
-	with_attr = get_archetype_with,
 
 	-- attribute
 	destroy_attribute = destroy_attribute,

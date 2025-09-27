@@ -1,5 +1,5 @@
-local any = require('@lib/any')
-local key = require('@lib/key')
+local any = require '@lib/any'
+local key = require '@lib/key'
 
 local run, focus, skip = {}, {}, {}
 
@@ -17,7 +17,7 @@ end
 function run.ensure_creates_with_primitive_default()
 	local attr = any.new(123)
 	local id = key.ensure_id()
-	local v = attr:ensure(id)
+	local v = attr:add(id)
 	assert(v == 123, 'ensure should create with primitive default')
 	assert(attr:find(id) == 123, 'value stored after ensure')
 end
@@ -27,8 +27,8 @@ function run.ensure_clones_table_default_per_id()
 	local attr = any.new(default)
 	local id1 = key.ensure_id()
 	local id2 = key.ensure_id()
-	local v1 = attr:ensure(id1)
-	local v2 = attr:ensure(id2)
+	local v1 = attr:add(id1)
+	local v2 = attr:add(id2)
 	assert(v1 ~= default, 'ensure should clone table default')
 	assert(v2 ~= default, 'ensure should clone table default')
 	assert(v1 ~= v2, 'each id should get its own clone')

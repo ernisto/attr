@@ -1,6 +1,6 @@
-local any = require('@lib/any')
-local cleanup = require('../lib/cleanup')
-local key = require('@lib/key')
+local any = require '@lib/any'
+local cleanup = require '@lib/cleanup'
+local key = require '@lib/key'
 local run, focus, skip = {}, {}, {}
 
 function run.generate_distinct_positive_ids_for_nil()

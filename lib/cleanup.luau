@@ -1,10 +1,15 @@
-local archetype = require('./archetype')
-local key = require('./key')
+local entity_archetype = require './entity_archetype'
+local remove_entity_archetype = entity_archetype.remove
+
+local key = require './key'
 local maybe_alive_id = key.maybe_alive
+local ensure_id = key.ensure_id
 local free_id = key.free_id
+local find_id = key.find_id
 type id = key.id
 
-local cleanups: { [id]: { id | (id) -> () } } = key.pre_allocated_storage()
+type cleanup = key.tracked_id | (key.tracked_id) -> ()
+local cleanups: { [id]: { cleanup } } = key.pre_allocated_storage()
 local inner_destroy_id
 
 -- functions
@@ -22,10 +27,14 @@ local function flush_cleanups(id: id, tracked)
 	end
 	cleanups[id] = nil
 end
-local function on_destroy(id: id, cleanup: key.tracked_id | (key.tracked_id) -> ())
+
+local function on_destroy(id: id, cleanup: cleanup)
 	local id_cleanups = cleanups[id]
 	if id_cleanups ~= nil then return table.insert(id_cleanups :: any, cleanup) end
 	cleanups[id] = { cleanup }
+end
+local function on_destroy_key(key: key.key, cleanup: cleanup)
+	on_destroy(ensure_id(key), cleanup)
 end
 
 local function destroy_id(tracked: key.tracked_id)
@@ -35,8 +44,12 @@ local function destroy_id(tracked: key.tracked_id)
 	flush_cleanups(id, tracked)
 	if not maybe_alive_id(tracked) then return end
 
-	archetype.remove(id)
+	remove_entity_archetype(id)
 	free_id(id)
+end
+local function destroy_key(key: key.key)
+	local id = find_id(key)
+	return id and destroy_id(id)
 end
 
 local last_alive = {}
@@ -61,4 +74,7 @@ return table.freeze {
 	destroy_unused_ids = destroy_unused_ids,
 	on_destroy = on_destroy,
 	destroy = destroy_id,
+
+	on_destroy_key = on_destroy_key,
+	destroy_key = destroy_key,
 }

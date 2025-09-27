@@ -1,12 +1,13 @@
-local utils = require('../utils')
+local utils = require './utils'
 local ordered_remove = utils.ordered_remove
 local ordered_insert = utils.ordered_insert
 local ordered_find = utils.ordered_find
 
-local key = require('../key')
+local key = require './key'
 local with_removed = key.pre_allocated_storage() -- [attribute]: archetype
 local with_added = key.pre_allocated_storage() -- [attribute]: archetype
 local attributes = key.pre_allocated_storage() -- ordered { entity }
+local ensure_id = key.ensure_id
 
 -- defs
 type archetype_id = key.id
@@ -15,28 +16,11 @@ type entity_id = key.id
 
 -- vars
 local archetype_by_attribute_amount = {}
-local archetypes_with_transition_of = {} -- unreachable archetypes through transitions
+local archetypes_with_transition_of = {}
 
 -- functions
--- returns nil if theres more than 1 missing attribute
--- which means no direct transition between those archetypes
-local function get_only_1_extra_attribute(
-	extra_attributes: { attribute_id },
-	required_attributes: { attribute_id }
-): attribute_id?
-	local matching_index = 1
-	local extra: attribute_id?
-
-	for _, attr in extra_attributes do
-		local required_attr = required_attributes[matching_index]
-		if attr == required_attr then
-			matching_index += 1
-			continue
-		end
-		if extra then return end
-		extra = attr
-	end
-	return extra
+local function has_attribute(archetype: archetype_id, required: attribute_id)
+	return ordered_find(attributes[archetype], required) ~= nil
 end
 local function match_attributes(attributes: { attribute_id }, required_attributes: { attribute_id }): boolean
 	local match_goal = #required_attributes
@@ -54,8 +38,23 @@ local function match_attributes(attributes: { attribute_id }, required_attribute
 	end
 	return false
 end
-local function has_attribute(archetype: archetype_id, required: attribute_id)
-	return ordered_find(attributes[archetype], required) ~= nil
+local function match_only_1_extra_attribute(
+	extra_attributes: { attribute_id },
+	required_attributes: { attribute_id }
+): attribute_id?
+	local matching_index = 1
+	local extra: attribute_id?
+
+	for _, attr in extra_attributes do
+		local required_attr = required_attributes[matching_index]
+		if attr == required_attr then
+			matching_index += 1
+			continue
+		end
+		if extra then return end
+		extra = attr
+	end
+	return extra
 end
 
 local function bind_transitions(
@@ -76,7 +75,7 @@ local function bind_transitions(
 		for _, small_archetype in smaller_archetypes do
 			if small_archetype == from_small_archetype then continue end
 
-			local missing_attribute = get_only_1_extra_attribute(this_attributes, attributes[small_archetype])
+			local missing_attribute = match_only_1_extra_attribute(this_attributes, attributes[small_archetype])
 			if not missing_attribute then continue end
 
 			removes[missing_attribute] = small_archetype
@@ -93,7 +92,7 @@ local function bind_transitions(
 	for _, big_archetype in bigger_archetypes do
 		if big_archetype == from_big_archetype then continue end
 
-		local extra_attribute = get_only_1_extra_attribute(attributes[big_archetype], this_attributes)
+		local extra_attribute = match_only_1_extra_attribute(attributes[big_archetype], this_attributes)
 		if not extra_attribute then continue end
 
 		with_removed[big_archetype][extra_attribute] = archetype
@@ -114,7 +113,7 @@ local function next_archetype_with(base_archetype: archetype_id?, new_attribute:
 		else nil
 	if existing then return existing end
 
-	local archetype = if base_archetype then key.ensure_id() else new_attribute
+	local archetype = if base_archetype then ensure_id() else new_attribute
 	local this_attributes = if base_archetype then table.clone(attributes[base_archetype]) else {}
 
 	ordered_insert(this_attributes, new_attribute)
@@ -140,7 +139,7 @@ local function next_archetype_without(base_archetype: archetype_id, prev_attribu
 	if existing then return existing end
 	if #attributes[base_archetype] == 1 then return nil end
 
-	local archetype = key.ensure_id()
+	local archetype = ensure_id()
 	local this_attributes = table.clone(attributes[base_archetype])
 
 	ordered_remove(this_attributes, prev_attribute)
@@ -218,40 +217,37 @@ local function iter_bigger_archetypes(archetype: archetype_id, without: { [attri
 	end
 end
 
-local function destroy(root: archetype_id)
-	if attributes[root] == nil then return end
+local function with_attr(...: attribute_id): archetype_id
+	local archetype = nil :: any
+	for _, next_attribute in { ... } do
+		archetype = next_archetype_with(archetype, next_attribute)
+	end
+	return archetype
+end
+local function reset_transitions(arch: archetype_id)
+	for attribute, prev_arch in with_removed[arch] do
+		with_added[prev_arch][attribute] = nil
+		local attribute_transitions = archetypes_with_transition_of[attribute]
 
-	local archs = {}
-	for arch in iter_bigger_archetypes(root) do
-		table.insert(archs, arch)
+		local index = table.find(attribute_transitions, arch)
+		table.remove(attribute_transitions, index)
+	end
+	for attribute, next_arch in with_added[arch] do
+		with_removed[next_arch][attribute] = nil
 	end
 
-	for _, arch in archs do
-		for attribute, prev_arch in with_removed[arch] do
-			with_added[prev_arch][attribute] = nil
-			local attribute_transitions = archetypes_with_transition_of[attribute]
+	local archetypes_with_same_attributes_amount = archetype_by_attribute_amount[#attributes[arch]]
+	local index = table.find(archetypes_with_same_attributes_amount, arch)
+	table.remove(archetypes_with_same_attributes_amount, index)
 
-			local index = table.find(attribute_transitions, arch)
-			table.remove(attribute_transitions, index)
-		end
-		for attribute, next_arch in with_added[arch] do
-			with_removed[next_arch][attribute] = nil
-		end
-
-		local archetypes_with_same_attributes_amount = archetype_by_attribute_amount[#attributes[arch]]
-		local index = table.find(archetypes_with_same_attributes_amount, arch)
-		table.remove(archetypes_with_same_attributes_amount, index)
-
-		with_removed[arch] = nil
-		with_added[arch] = nil
-		attributes[arch] = nil
-		key.free_id(arch)
-	end
+	with_removed[arch] = nil
+	with_added[arch] = nil
+	attributes[arch] = nil
 end
 
 -- module
 return table.freeze {
-	get_only_1_extra_attribute = get_only_1_extra_attribute,
+	get_only_1_extra_attribute = match_only_1_extra_attribute,
 	match_attributes = match_attributes,
 	has_attribute = has_attribute,
 	attributes = attributes,
@@ -265,5 +261,6 @@ return table.freeze {
 	iter_smaller_archetypes = iter_smaller_archetypes,
 	iter_bigger_archetypes = iter_bigger_archetypes,
 
-	destroy = destroy,
+	with_attr = with_attr,
+	reset_transitions = reset_transitions,
 }

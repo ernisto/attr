@@ -1,14 +1,18 @@
-local archetype = require('./archetype')
+local archetype = require './archetype'
+local archetype_event = require './archetype_event'
+local fire_change = archetype_event.fire_change
+
+local entity_archetype = require './entity_archetype'
+local move_entity_archetype_to_without = entity_archetype.move_to_without
+local move_entity_archetype_to_with = entity_archetype.move_to_with
+local get_entity_archetype = entity_archetype.get
+
 local key = require './key'
-local observer = require('./observer')
+local maybe_alive = key.maybe_alive
 local ensure_id = key.ensure_id
+local find_id = key.find_id
 type key = key.key
 type id = key.id
-
--- pair(any, player) -> owner(player), replicating(player)
--- pair(owner, player) -> item1, item2
--- pair(owner, any) -> item1, item2, item3
--- owner -> player
 
 -- functions
 local function by_default<V>(defined_default: V): V
@@ -23,11 +27,10 @@ export type attr<V = any> = {
 	assert: (attr<V>, key, message: string?) -> V,
 	find: (attr<V>, key) -> V?,
 	has: (attr<V>, key) -> boolean,
-	swap: (attr<V>, key, key) -> (V?, V?),
 
 	remove: (attr<V>, key) -> (),
-	ensure: (attr<V>, key) -> V,
 	set: (attr<V>, key, V) -> (),
+	add: (attr<V>, key) -> V,
 
 	iter: (attr<V>) -> () -> (id, V),
 	all: (attr<V>) -> { [id]: V },
@@ -35,21 +38,25 @@ export type attr<V = any> = {
 
 -- methods
 local function attr_find<V>(data: attr<V>, key: key): V?
-	return data[ensure_id(key)]
+	local id = find_id(key)
+	return id and data[id]
 end
 local function attr_set<V>(data: attr<V>, key: key, value: V?): ()
 	local id, tracked = ensure_id(key)
-	local attr_id = ensure_id(data)
 	local prev_value = data[id]
 
+	if prev_value == value then return end
+	local attr_id = ensure_id(data)
+
 	if value == nil and prev_value ~= nil then
-		local prev_arch = archetype.move_to_without(tracked, attr_id)
-		observer.fire_remove(tracked, prev_arch :: any, attr_id)
+		move_entity_archetype_to_without(tracked, attr_id)
+		data[id] = value
 	elseif value ~= nil and prev_value == nil then
-		local new_arch = archetype.move_to_with(tracked, attr_id)
-		observer.fire_add(tracked, new_arch, attr_id)
+		data[id] = value
+		move_entity_archetype_to_with(tracked, attr_id)
 	else
-		observer.fire_change(tracked, archetype.get(id) :: any, attr_id)
+		data[id] = value
+		fire_change(tracked, get_entity_archetype(id) :: any, attr_id)
 	end
 	data[id] = value
 end
@@ -58,43 +65,36 @@ local function attr_iter<V>(data: attr<V>) --: () -> (id, V)
 end
 
 local function attr_has<V>(data: attr<V>, key: key): boolean
-	return data:find(key) ~= nil
+	return attr_find(data, key) ~= nil
 end
-local function attr_ensure<V>(data: attr<V>, key: key): V
-	local value = data:find(key)
+local function attr_add<V>(data: attr<V>, key: key): V
+	local value = attr_find(data, key)
 	if value == nil then
 		value = by_default(attr_default[data])
-		data:set(key, value :: any)
+		attr_set(data, key, value :: any)
 	end
 	return value :: any
 end
 local function attr_all<V>(data: attr<V>): { [id]: V }
 	local output = {}
-	for k, v in data:iter() do
+	for k, v in attr_iter(data) do
 		output[k] = v
 	end
 	return output
 end
-local function attr_swap<V>(data: attr<V>, key1: key, key2: key): (V?, V?)
-	local v1 = data:find(key1)
-	local v2 = data:find(key2)
-	data:set(key1, v2 :: any)
-	data:set(key2, v1 :: any)
-	return v2, v1
-end
 
 local function attr_assert<V>(data: attr<V>, key: key, message: string?): V
-	return data:find(key) or error(message or `not found`)
+	return attr_find(data, key) or error(message or `not found`)
 end
-local function attr_await_until_destroy<V>(data: attr<V>, maybe_destroyed_key: any): V?
-	local id = key.ensure_id(maybe_destroyed_key)
-	while key.maybe_alive(id) and not data:has(maybe_destroyed_key) do
+local function attr_await_until_destroy<V>(data: attr<V>, key: any): V?
+	local id = ensure_id(key)
+	while maybe_alive(id) and not attr_has(data, key) do
 		task.wait()
 	end
-	return data:find(maybe_destroyed_key) :: any
+	return attr_find(data, key) :: any
 end
-local function attr_assert_await<V>(data: attr<V>, maybe_destroyed_key: key, message: string?): V
-	return data:await_until_destroy(maybe_destroyed_key) or error(message or `key destroyed before contains {data}`)
+local function attr_assert_await<V>(data: attr<V>, key: key, message: string?): V
+	return attr_await_until_destroy(data, key) or error(message or `key destroyed before contains {data}`)
 end
 
 -- constructor
@@ -102,12 +102,11 @@ local attr_impl = {
 	await_until_destroy = attr_await_until_destroy,
 	assert_await = attr_assert_await,
 	assert = attr_assert,
-	ensure = attr_ensure,
 	remove = attr_set,
 	find = attr_find,
 	iter = attr_iter,
-	swap = attr_swap,
 	set = attr_set,
+	add = attr_add,
 	has = attr_has,
 	all = attr_all,
 }
@@ -128,11 +127,10 @@ return table.freeze {
 	await_until_destroy = attr_await_until_destroy,
 	assert_await = attr_assert_await,
 	assert = attr_assert,
-	ensure = attr_ensure,
 	remove = attr_set,
 	find = attr_find,
-	swap = attr_swap,
 	set = attr_set,
+	add = attr_add,
 	has = attr_has,
 	all = attr_all,
 

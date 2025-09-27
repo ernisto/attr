@@ -1,5 +1,5 @@
-local attr = require('../../lib')
-local serde = require('./serde')
+local attr = require '../../lib'
+local serde = require './serde'
 
 local handler_attribute = attr.any(nil :: any)
 local save_key = attr.any('key')

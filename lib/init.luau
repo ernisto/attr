@@ -1,8 +1,8 @@
 local any = require '@self/any'
-local cleanup = require('@self/cleanup')
+local archetype_event = require '@self/archetype_event'
+local cleanup = require '@self/cleanup'
 local key = require '@self/key'
 local link = require '@self/link'
-local observer = require '@self/observer'
 
 export type link_attr = link.link_attr
 export type link1_attr = link.link1
@@ -16,16 +16,16 @@ export type id = key.id
 
 -- module
 return table.freeze {
-	id_source = key.source,
+	id_source = key.maybe_source,
 	id = key.ensure_id,
 
-	destroy = cleanup.destroy,
-	on_destroy = cleanup.on_destroy,
+	destroy = cleanup.destroy_key,
+	on_destroy = cleanup.on_destroy_key,
 	gc_step = cleanup.destroy_unused_ids,
 
-	on_add = observer.bind_add,
-	on_remove = observer.bind_remove,
-	on_change = observer.bind_change,
+	on_remove = archetype_event.bind_remove,
+	on_change = archetype_event.bind_change,
+	on_add = archetype_event.bind_add,
 
 	any = any.new,
 	ref = link.link_N1,
