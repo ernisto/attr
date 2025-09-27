@@ -13,11 +13,11 @@ local function tag()
 	return a, A
 end
 local function entity(...: attr.attr<boolean>)
-	local id = attr.id()
+	local _, tracked_id = attr.id()
 	for _, attribute in { ... } do
-		attribute:ensure(id)
+		attribute:ensure(tracked_id)
 	end
-	return id
+	return tracked_id
 end
 local arch_attrs = archetype.with_attr
 

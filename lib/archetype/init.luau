@@ -4,6 +4,7 @@ local head_id = key.pre_allocated_storage()
 local next_id = key.pre_allocated_storage()
 local prev_id = key.pre_allocated_storage()
 local id_sources = key.id_sources
+local alive = key.unsafe_alive
 
 local graph = require('@self/graph')
 local next_archetype_without = graph.next_archetype_without
@@ -16,7 +17,7 @@ type attribute_id = key.id
 type entity_id = key.id
 
 -- functions
-local function iter_entities(root_archetype: archetype_id, exclude: { [attribute_id]: true }?): () -> key.id?
+local function iter_entities(root_archetype: archetype_id, exclude: { [attribute_id]: true }?): () -> key.tracked_id?
 	local next_compatible_archetype = graph.iter_bigger_archetypes(root_archetype, exclude)
 	local archetype = next_compatible_archetype()
 	local next_entity = archetype and head_id[archetype]
@@ -31,7 +32,7 @@ local function iter_entities(root_archetype: archetype_id, exclude: { [attribute
 		end
 		local entity = next_entity
 
-		next_entity = next_id[next_entity]
+		next_entity = next_entity and next_id[alive(next_entity)]
 		return entity
 	end
 end
@@ -43,69 +44,72 @@ local function get_archetype_with(...: attribute_id): archetype_id
 	return archetype
 end
 
-local function remove_archetype_entity(archetype: archetype_id, id: entity_id)
-	local prev = prev_id[id]
-	local next = next_id[id]
+local function remove_archetype_entity(archetype: archetype_id, entity: key.tracked_id)
+	local prev = prev_id[alive(entity)]
+	local next = next_id[alive(entity)]
 	if prev then
-		next_id[prev] = next
+		next_id[alive(prev)] = next
 	else
 		head_id[archetype] = next
 	end
-	if next then prev_id[next] = prev end
+	if next then prev_id[alive(next)] = prev end
 end
-local function add_archetype_entity(archetype: archetype_id, id: entity_id)
+local function add_archetype_entity(archetype: archetype_id, entity: key.tracked_id)
 	local prev_head = head_id[archetype]
-	head_id[archetype] = id
-	prev_id[id] = nil
 
-	if prev_head then prev_id[prev_head] = id end
-	next_id[id] = prev_head
+	head_id[archetype] = entity
+	prev_id[alive(entity)] = nil
+
+	if prev_head then prev_id[alive(prev_head)] = entity end
+	next_id[alive(entity)] = prev_head
 end
 
-local function set_entity_archetype(id: entity_id, new_archetype: archetype_id?, prev_archetype: archetype_id?)
-	if prev_archetype ~= nil then remove_archetype_entity(prev_archetype, id) end
-	if new_archetype ~= nil then add_archetype_entity(new_archetype, id) end
-	current_archetype[id] = new_archetype :: any
+local function set_entity_archetype(entity: key.tracked_id, new_archetype: archetype_id?, prev_archetype: archetype_id?)
+	if prev_archetype ~= nil then remove_archetype_entity(prev_archetype, entity) end
+	if new_archetype ~= nil then add_archetype_entity(new_archetype, entity) end
+	current_archetype[alive(entity)] = new_archetype :: any
 end
 local function get_entity_archetype(id: entity_id): archetype_id?
-	return current_archetype[id]
+	return current_archetype[alive(id)]
 end
 
-local function move_entity_to_with(id: entity_id, added: attribute_id)
-	local prev_archetype = get_entity_archetype(id)
+local function move_entity_to_with(entity: key.tracked_id, added: attribute_id): archetype_id
+	local prev_archetype = get_entity_archetype(entity)
 	local new_archetype = next_archetype_with(prev_archetype, added)
-	set_entity_archetype(id, new_archetype, prev_archetype)
+
+	set_entity_archetype(entity, new_archetype, prev_archetype)
 	return new_archetype
 end
-local function move_entity_to_without(id: entity_id, removed: attribute_id)
-	local prev_archetype = get_entity_archetype(id)
-	if prev_archetype == nil then return end
-
+local function move_entity_to_without(entity: key.tracked_id, removed: attribute_id): archetype_id
+	local prev_archetype = get_entity_archetype(entity) :: archetype_id
 	local new_archetype = next_archetype_without(prev_archetype, removed)
-	set_entity_archetype(id, new_archetype, prev_archetype)
+
+	set_entity_archetype(entity, new_archetype, prev_archetype)
+	return prev_archetype
 end
 
-local function entity_is_a(id: entity_id, base_archetype: archetype_id): boolean
-	local archetype = current_archetype[id]
+local function entity_is_a(entity: key.tracked_id, base_archetype: archetype_id): boolean
+	local archetype = get_entity_archetype(entity)
 	if archetype == nil then return false end
 	if archetype == base_archetype then return true end
 
 	return graph.match_attributes(attributes[archetype], attributes[base_archetype])
 end
-local function get_entity_attrs(id: entity_id): { attribute_id }
-	local archetype = current_archetype[id]
+local function get_entity_attrs(entity: key.tracked_id): { attribute_id }
+	local archetype = get_entity_archetype(entity)
 	return if archetype then attributes[archetype] else {}
 end
 
-local function remove_entity_archetype(id: entity_id)
-	local archetype = current_archetype[id]
+local function remove_entity_archetype(entity: key.tracked_id)
+	local archetype = get_entity_archetype(entity)
 	if archetype == nil then return end
 
+	local id = alive(entity)
 	for _, attribute in attributes[archetype] do
 		local data = id_sources[attribute] :: any
 		if data then data:remove(id) end
 	end
-	set_entity_archetype(id, nil, archetype)
+	set_entity_archetype(entity, nil, archetype)
 end
 local function destroy_attribute(attribute: attribute_id)
 	local data = id_sources[attribute] :: any

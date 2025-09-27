@@ -43,11 +43,10 @@ local function attr_set<V>(data: attr<V>, key: key, value: V?): ()
 	local prev_value = data[id]
 
 	if value == nil and prev_value ~= nil then
-		local prev_arch = archetype.get(id)
-		archetype.move_to_without(id, attr_id)
+		local prev_arch = archetype.move_to_without(tracked, attr_id)
 		observer.fire_remove(tracked, prev_arch :: any, attr_id)
 	elseif value ~= nil and prev_value == nil then
-		local new_arch = archetype.move_to_with(id, attr_id)
+		local new_arch = archetype.move_to_with(tracked, attr_id)
 		observer.fire_add(tracked, new_arch, attr_id)
 	else
 		observer.fire_change(tracked, archetype.get(id) :: any, attr_id)

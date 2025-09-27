@@ -8,7 +8,9 @@ export type link_attr<T> = link.link_attr<T>
 export type link1_attr<T> = link.link1<T>
 export type linkN_attr<T> = link.linkN<T>
 export type attr<T> = any.attr<T>
+
 export type tracked_id = key.tracked_id
+export type id_source = key.id_source
 export type key = key.key
 export type id = key.id
 
