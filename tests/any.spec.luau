@@ -47,12 +47,13 @@ end
 
 function run.all_returns_shallow_copy()
 	local attr = any.new(0)
-	local id1 = key.ensure_id()
-	local id2 = key.ensure_id()
+	local _, id1 = key.ensure_id()
+	local _, id2 = key.ensure_id()
 	attr:set(id1, 10)
 	attr:set(id2, 20)
 	local all = attr:all()
-	assert(all[id1] == 10 and all[id2] == 20, 'all should contain all entries')
+	assert(#all == 2)
+	assert(table.find(all, id1) and table.find(all, id2), 'all should contain all entries')
 end
 
 return { run = run, skip = skip, focus = focus }

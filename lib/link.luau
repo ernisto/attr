@@ -1,3 +1,7 @@
+local archetype_handle = require './archetype_handle'
+local handle_archetype_id = archetype_handle.handle_id
+local handle_archetype = archetype_handle.handle
+
 local entity_archetype = require './entity_archetype'
 local move_entity_archetype_to_without = entity_archetype.move_to_without
 local move_entity_archetype_to_with = entity_archetype.move_to_with
@@ -33,18 +37,19 @@ local function no_op() end
 local backward_link = setmetatable({}, { __mode = 'kv' })
 export type link_attr = link1 | linkN
 export type link1 = attr<id>
-export type linkN = {
-	await_until_destroy: (linkN, key, target: key) -> id?,
-	assert_await: (linkN, key, target: key) -> id,
-	assert: (linkN, key, target: key, message: string?) -> id,
-
-	has: (linkN, key, target: key) -> boolean,
+export type linkN = archetype_handle.arch1<id, {
+	of: (linkN, of: key?) -> archetype_handle.arch1<nil>,
 	remove: (linkN, key, target: key?) -> (),
 	add: (linkN, key, target: key) -> (),
 
+	assert_await: (linkN, key, target: key, message: string?) -> (),
+	assert: (linkN, key, target: key, message: string?) -> (),
+	await: (linkN, key, target: key) -> boolean,
+	has: (linkN, key, target: key) -> boolean,
+
 	iter: (linkN, target: key?) -> () -> id,
 	all: (linkN, of: key?) -> { id },
-}
+}>
 
 -- functions
 local storage = key.pre_allocated_storage()
@@ -147,7 +152,7 @@ local function link1N_remove(data: linkN, key: key, target_key: key?)
 		return linkN_remove(data, id)
 	end
 
-	if data ~= nil and attr_find(back, target_id) ~= tracked then return end
+	if back ~= nil and attr_find(back, target_id) ~= tracked then return end
 	linkN_remove(data, id, target)
 
 	if back == nil then return end
@@ -198,11 +203,25 @@ local function linkNN_add(data: linkN, key: key, target_key: key)
 end
 
 -- utils
+local function linkN_targets_of(data: linkN, key: key): archetype_handle.arch1<nil>?
+	local id = find_id(key) or error(`attempt to use dead reference '{key}'`)
+	local arch_id = get_key_targets(data, id)
+
+	return handle_archetype_id(arch_id) :: any
+end
+
 local function linkN_iter(data: linkN, key: key?): () -> id?
 	local key_id = key and find_id(key)
 	local arch = if key_id ~= nil then data[key_id] else ensure_id(data)
 
 	return if arch then iter_archetype_entities(arch) else no_op
+end
+local function linkN_all(data: linkN, key: key?): { id }
+	local out = {}
+	for id in linkN_iter(data, key) do
+		table.insert(out, id)
+	end
+	return out
 end
 
 local function linkN_has(data: linkN, key: key, target_key: key): boolean
@@ -215,70 +234,66 @@ local function linkN_has(data: linkN, key: key, target_key: key): boolean
 	local _, target = find_id(target_key)
 	return target ~= nil and entity_has_attribute(target, attr_for_key)
 end
-local function linkN_all(data: linkN, key: key?): { id }
-	local out = {}
-	for id in linkN_iter(data, key) do
-		table.insert(out, id)
-	end
-	return out
+local function linkN_assert_has(data: linkN, key: key, target_key: key, message: string?)
+	if linkN_has(data, key, target_key) then return end
+
+	assert(find_id(target_key) ~= nil, `target {target_key} is destroyed`)
+	assert(find_id(key) ~= nil, `key {key} is destroyed`)
+	error(message or `link of key '{key}' to '{target_key}' doesnt exist`)
 end
 
-local function linkN_assert(data: linkN, key: key, target_key: key, message: string?)
-	return linkN_has(data, key, target_key) or error(message or `link of key '{key}' to '{target_key}' doesnt exist`)
-end
-local function linkN_await_until_destroy(data: linkN, key: key, target_key: key): id?
+local function linkN_await_has(data: linkN, key: key, target_key: key): boolean
 	local id, tracked = ensure_id(key)
-	while maybe_alive(tracked) and not linkN_has(data, id, target_key) do
+	while maybe_alive(tracked) and maybe_alive(target_key :: any) and not linkN_has(data, id, target_key) do
 		task.wait()
 	end
-	return linkN_has(data, id, target_key) and target_key or nil
+	return linkN_has(data, id, target_key)
 end
-local function linkN_assert_await(data: linkN, key: key, target_key: key, message: string?): id?
-	return linkN_await_until_destroy(data, key, target_key) or error(message or `key destroyed before contains {data}`)
+local function linkN_assert_await_has(data: linkN, key: key, target_key: key, message: string?)
+	if linkN_await_has(data, key, target_key) then return end
+
+	assert(find_id(target_key) ~= nil, `target was destroyed`)
+	error(message or `key destroyed before contains {data}`)
 end
 
-local linkN_impl = table.freeze {
-	await_until_destroy = linkN_await_until_destroy,
-	assert_await = linkN_assert_await,
-	assert = linkN_assert,
-	-- remove = linkN_remove,
-	iter = linkN_iter,
-	-- add = linkN_add,
-	all = linkN_all,
-	has = linkN_has,
-}
+local linkN_impl = table.clone(archetype_handle.impl) :: any
+linkN_impl.assert_await = linkN_assert_await_has
+linkN_impl.assert = linkN_assert_has
+linkN_impl.await = linkN_await_has
+-- linkN_impl.remove = linkN_remove
+linkN_impl.iter = linkN_iter
+-- linkN_impl.add = linkN_add
+linkN_impl.all = linkN_all
+linkN_impl.has = linkN_has
+linkN_impl.of = linkN_targets_of
 
 -- metatables
 local link11_impl = table.clone(attr.impl :: any)
 link11_impl.remove = link11_set
 link11_impl.set = link11_set
-link11_impl.__metatable = 'locked'
-link11_impl.__index = link11_impl
 link11_impl.kind = 'link1'
+link11_impl.__index = link11_impl
 table.freeze(link11_impl)
 
 local linkN1_impl = table.clone(attr.impl :: any)
 linkN1_impl.remove = linkN1_set
 linkN1_impl.set = linkN1_set
-linkN1_impl.__metatable = 'locked'
-linkN1_impl.__index = linkN1_impl
 linkN1_impl.kind = 'link1'
+linkN1_impl.__index = linkN1_impl
 table.freeze(linkN1_impl)
 
 local link1N_impl = table.clone(linkN_impl)
 link1N_impl.remove = link1N_remove
 link1N_impl.add = link1N_add
-link1N_impl.__metatable = 'locked'
-link1N_impl.__index = link1N_impl
 link1N_impl.kind = 'linkN'
+link1N_impl.__index = link1N_impl
 table.freeze(link1N_impl)
 
 local linkNN_impl = table.clone(linkN_impl)
 linkNN_impl.remove = linkNN_remove
 linkNN_impl.add = linkNN_add
-linkNN_impl.__metatable = 'locked'
-linkNN_impl.__index = linkNN_impl
 linkNN_impl.kind = 'linkN'
+linkNN_impl.__index = linkNN_impl
 table.freeze(linkNN_impl)
 
 -- constructors
@@ -289,9 +304,7 @@ local function link_11(): (link1, link1)
 	backward_link[forward] = backward
 	backward_link[backward] = forward
 
-	archetype.with_attr((ensure_id(forward)))
-	archetype.with_attr((ensure_id(backward)))
-	return forward, backward
+	return handle_archetype(forward) :: any, handle_archetype(backward) :: any
 end
 local function link_1N(): (linkN, link1)
 	local forward = setmetatable(key.pre_allocated_storage(), link1N_impl) :: any
@@ -300,9 +313,7 @@ local function link_1N(): (linkN, link1)
 	backward_link[forward] = backward
 	backward_link[backward] = forward
 
-	archetype.with_attr((ensure_id(forward)))
-	archetype.with_attr((ensure_id(backward)))
-	return forward, backward
+	return handle_archetype(forward) :: any, handle_archetype(backward) :: any
 end
 local function link_NN(): (linkN, linkN)
 	local forward = setmetatable(key.pre_allocated_storage(), linkNN_impl) :: any
@@ -311,9 +322,7 @@ local function link_NN(): (linkN, linkN)
 	backward_link[forward] = backward
 	backward_link[backward] = forward
 
-	archetype.with_attr((ensure_id(forward)))
-	archetype.with_attr((ensure_id(backward)))
-	return forward, backward
+	return handle_archetype(forward) :: any, handle_archetype(backward) :: any
 end
 local function link_N1(): (link1, linkN)
 	local a, b = link_1N()

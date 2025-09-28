@@ -13,7 +13,7 @@ local function doesnt_gc(x: any): boolean
 end
 
 -- memory
-export type storage = { [id]: any }
+export type storage<T = any> = { [id]: T }
 local pre_allocate_amount = 2 ^ 12
 
 local function pre_allocated_arr(): storage

@@ -3,6 +3,7 @@ local archetype_event = require '@self/archetype_event'
 local cleanup = require '@self/cleanup'
 local key = require '@self/key'
 local link = require '@self/link'
+local map = require '@self/map'
 
 export type link_attr = link.link_attr
 export type link1_attr = link.link1
@@ -26,6 +27,7 @@ return table.freeze {
 	on_remove = archetype_event.bind_remove,
 	on_change = archetype_event.bind_change,
 	on_add = archetype_event.bind_add,
+	map = map,
 
 	any = any.new,
 	ref = link.link_N1,
