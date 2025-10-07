@@ -8,7 +8,7 @@ local map = require '@self/map'
 export type link_attr = link.link_attr
 export type link1_attr = link.link1
 export type linkN_attr = link.linkN
-export type attr<T> = any.attr<T>
+export type attr<T, R = T> = any.attr<T, R>
 
 export type tracked_id = key.tracked_id
 export type id_source = key.id_source

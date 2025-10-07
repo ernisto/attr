@@ -14,7 +14,6 @@ local archetype_with_attr = archetype.with_attr
 local bind_transition = archetype.bind_transition
 
 local attr = require './any'
-type attr<V = any> = attr.attr
 local attr_find = attr.find
 local attr_set = attr.set
 
@@ -36,7 +35,7 @@ local function no_op() end
 
 local backward_link = setmetatable({}, { __mode = 'kv' })
 export type link_attr = link1 | linkN
-export type link1 = attr<id>
+export type link1 = attr.attr<key, id>
 export type linkN = archetype_handle.arch1<id, {
 	of: (linkN, of: key?) -> archetype_handle.arch1<nil>,
 	remove: (linkN, key, target: key?) -> (),

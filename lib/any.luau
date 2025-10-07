@@ -22,12 +22,12 @@ local function by_default<V>(defined_default: V): V
 end
 
 -- defs
-export type attr<V = any> = archetype_handle.arch1<
-	V,
+export type attr<Value = any, Output = Value> = archetype_handle.arch1<
+	Value,
 	{
-		remove: (attr<V>, key) -> (),
-		set: (attr<V>, key, V) -> (),
-		add: (attr<V>, key) -> V,
+		remove: (any, key) -> (),
+		set: (any, key, Value) -> (),
+		add: (any, key) -> Output,
 
 		-- inline archetype_handle.base_impl<V>
 		iter: (any) -> () -> key.id,
@@ -38,10 +38,10 @@ export type attr<V = any> = archetype_handle.arch1<
 		assert_has: (any, key: key.key) -> (),
 		has: (any, key: key.key) -> boolean,
 
-		assert_await: (any, key: key.key) -> V,
-		await: (any, key: key.key) -> V?,
-		assert: (any, key: key.key) -> V,
-		find: (any, key: key.key) -> V?,
+		assert_await: (any, key: key.key) -> Output,
+		await: (any, key: key.key) -> Output?,
+		assert: (any, key: key.key) -> Output,
+		find: (any, key: key.key) -> Output?,
 	}
 >
 
