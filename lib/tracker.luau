@@ -28,20 +28,54 @@ local function get_tracker(arch: archetype_handle.arch, callback: (key.id, ...an
 	local cleanups = {}
 	local arch_id = assert_alive_id(arch_ids[1])
 
-	local function track(entity)
-		local index = alive(entity)
-		if read_amount == 0 then
-			cleanups[index] = callback(entity)
-			return
-		end
-		local datas = table.create(read_amount)
-		for i = 1, read_amount do
-			datas[i] = storages[i][index]
-		end
-		cleanups[index] = callback(entity, unpack(datas, 1, read_amount))
-	end
-
-	return arch_id, cleanups, track
+	local a, b, c, d, e, f, g, h = unpack(storages)
+	return arch_id,
+		cleanups,
+		if read_amount == 0
+			then function(entity)
+				local i = alive(entity)
+				cleanups[i] = callback(entity)
+			end
+			elseif read_amount == 1 then function(entity)
+				local i = alive(entity)
+				cleanups[i] = callback(entity, a[i])
+			end
+			elseif read_amount == 2 then function(entity)
+				local i = alive(entity)
+				cleanups[i] = callback(entity, a[i], b[i])
+			end
+			elseif read_amount == 3 then function(entity)
+				local i = alive(entity)
+				cleanups[i] = callback(entity, a[i], b[i], c[i])
+			end
+			elseif read_amount == 4 then function(entity)
+				local i = alive(entity)
+				cleanups[i] = callback(entity, a[i], b[i], c[i], d[i])
+			end
+			elseif read_amount == 5 then function(entity)
+				local i = alive(entity)
+				cleanups[i] = callback(entity, a[i], b[i], c[i], d[i], e[i])
+			end
+			elseif read_amount == 6 then function(entity)
+				local i = alive(entity)
+				cleanups[i] = callback(entity, a[i], b[i], c[i], d[i], e[i], f[i])
+			end
+			elseif read_amount == 7 then function(entity)
+				local i = alive(entity)
+				cleanups[i] = callback(entity, a[i], b[i], c[i], d[i], e[i], f[i], g[i])
+			end
+			elseif read_amount == 8 then function(entity)
+				local i = alive(entity)
+				cleanups[i] = callback(entity, a[i], b[i], c[i], d[i], e[i], f[i], g[i], h[i])
+			end
+			else function(entity)
+				local index = alive(entity)
+				local datas = table.create(read_amount)
+				for i = 1, read_amount do
+					datas[i] = storages[i][index]
+				end
+				cleanups[index] = callback(entity, unpack(datas, 1, read_amount))
+			end
 end
 
 -- functions
