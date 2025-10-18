@@ -15,7 +15,7 @@ function run.base_usage()
 
 	local calls, log_call = call_logger()
 
-	attr.map(A + B + C:of(A), log_call)
+	attr.on_add(A + B + C:of(A), log_call)
 	assert(#calls == 0)
 
 	A:add(B)

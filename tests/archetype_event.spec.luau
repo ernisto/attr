@@ -1,6 +1,7 @@
 --!nolint LocalUnused
 
 local archetype = require '@lib/archetype'
+local archetype_event = require '@lib/archetype_event'
 local attr = require '@lib'
 
 local run = {}
@@ -11,7 +12,7 @@ function run.on_add()
 	local A = attr.id(a)
 
 	local call = {}
-	local disconnect = attr.on_add(A, function(entity)
+	local disconnect = archetype_event.bind_add(A, function(entity)
 		table.insert(call, entity)
 	end)
 
@@ -42,7 +43,7 @@ function run.on_remove()
 	local B = attr.id(b)
 
 	local remove_calls = {}
-	local disconnect = attr.on_remove(A, function(entity)
+	local disconnect = archetype_event.bind_remove(A, function(entity)
 		table.insert(remove_calls, entity)
 	end)
 
@@ -82,7 +83,7 @@ function run.on_change()
 	local A = attr.id(a)
 
 	local change_calls = {}
-	local disconnect = attr.on_change(A, function(entity)
+	local disconnect = archetype_event.bind_change(A, function(entity)
 		table.insert(change_calls, entity)
 	end)
 
@@ -117,19 +118,19 @@ function run.multiple_observers()
 	local change_calls = {}
 
 	-- Set up multiple observers
-	local disconnect1 = attr.on_add(A, function(entity)
+	local disconnect1 = archetype_event.bind_add(A, function(entity)
 		table.insert(add_calls, { observer = 1, entity = entity })
 	end)
 
-	local disconnect2 = attr.on_add(A, function(entity)
+	local disconnect2 = archetype_event.bind_add(A, function(entity)
 		table.insert(add_calls, { observer = 2, entity = entity })
 	end)
 
-	local disconnect3 = attr.on_remove(A, function(entity)
+	local disconnect3 = archetype_event.bind_remove(A, function(entity)
 		table.insert(remove_calls, { observer = 3, entity = entity })
 	end)
 
-	local disconnect4 = attr.on_change(A, function(entity)
+	local disconnect4 = archetype_event.bind_change(A, function(entity)
 		table.insert(change_calls, { observer = 4, entity = entity })
 	end)
 
@@ -169,17 +170,17 @@ function run.archetype_transitions()
 	local remove_calls = {}
 
 	-- Observer for A component
-	local disconnect_a = attr.on_add(A, function(entity)
+	local disconnect_a = archetype_event.bind_add(A, function(entity)
 		table.insert(add_calls, { component = 'A', entity = entity })
 	end)
 
 	-- Observer for B component
-	local disconnect_b = attr.on_add(B, function(entity)
+	local disconnect_b = archetype_event.bind_add(B, function(entity)
 		table.insert(add_calls, { component = 'B', entity = entity })
 	end)
 
 	-- Observer for A removal
-	local disconnect_remove_a = attr.on_remove(A, function(entity)
+	local disconnect_remove_a = archetype_event.bind_remove(A, function(entity)
 		table.insert(remove_calls, { component = 'A', entity = entity })
 	end)
 
@@ -219,7 +220,7 @@ function run.observer_disconnection()
 	local A = attr.id(a)
 
 	local calls = {}
-	local disconnect = attr.on_add(A, function(entity)
+	local disconnect = archetype_event.bind_add(A, function(entity)
 		table.insert(calls, entity)
 	end)
 
@@ -249,17 +250,17 @@ function run.observer_with_different_archetypes()
 	local calls = {}
 
 	-- Observer for A archetype
-	local disconnect_a = attr.on_add(A, function(entity)
+	local disconnect_a = archetype_event.bind_add(A, function(entity)
 		table.insert(calls, { type = 'A', entity = entity })
 	end)
 
 	-- Observer for B archetype
-	local disconnect_b = attr.on_add(B, function(entity)
+	local disconnect_b = archetype_event.bind_add(B, function(entity)
 		table.insert(calls, { type = 'B', entity = entity })
 	end)
 
 	-- Observer for C archetype
-	local disconnect_c = attr.on_add(C, function(entity)
+	local disconnect_c = archetype_event.bind_add(C, function(entity)
 		table.insert(calls, { type = 'C', entity = entity })
 	end)
 
@@ -305,12 +306,12 @@ function run.observer_with_archetype_hierarchy()
 	local calls = {}
 
 	-- Observer for A archetype (should catch entities with A or A+B)
-	local disconnect_a = attr.on_add(A, function(entity)
+	local disconnect_a = archetype_event.bind_add(A, function(entity)
 		table.insert(calls, { type = 'A', entity = entity })
 	end)
 
 	-- Observer for B archetype (should catch entities with B or A+B)
-	local disconnect_b = attr.on_add(B, function(entity)
+	local disconnect_b = archetype_event.bind_add(B, function(entity)
 		table.insert(calls, { type = 'B', entity = entity })
 	end)
 
@@ -352,19 +353,19 @@ function run.observer_with_composite_archetype()
 
 	-- Observer for A+B archetype (should only catch entities with both A and B)
 	local AB_archetype = archetype.with_attr(A, B)
-	local disconnect_ab = attr.on_add(AB_archetype, function(entity)
+	local disconnect_ab = archetype_event.bind_add(AB_archetype, function(entity)
 		table.insert(calls, { type = 'A+B', entity = entity })
 	end)
 
 	-- Observer for A+C archetype (should only catch entities with both A and C)
 	local AC_archetype = archetype.with_attr(A, C)
-	local disconnect_ac = attr.on_add(AC_archetype, function(entity)
+	local disconnect_ac = archetype_event.bind_add(AC_archetype, function(entity)
 		table.insert(calls, { type = 'A+C', entity = entity })
 	end)
 
 	-- Observer for B+C archetype (should only catch entities with both B and C)
 	local BC_archetype = archetype.with_attr(B, C)
-	local disconnect_bc = attr.on_add(BC_archetype, function(entity)
+	local disconnect_bc = archetype_event.bind_add(BC_archetype, function(entity)
 		table.insert(calls, { type = 'B+C', entity = entity })
 	end)
 
@@ -421,7 +422,7 @@ function run.observer_with_triple_composite_archetype()
 
 	-- Observer for A+B+C archetype (should only catch entities with all three)
 	local ABC_archetype = archetype.with_attr(A, B, C)
-	local disconnect_abc = attr.on_add(ABC_archetype, function(entity)
+	local disconnect_abc = archetype_event.bind_add(ABC_archetype, function(entity)
 		table.insert(calls, { type = 'A+B+C', entity = entity })
 	end)
 
@@ -477,12 +478,12 @@ function run.observer_composite_archetype_removal()
 
 	-- Observer for A+B archetype additions
 	local AB_archetype = archetype.with_attr(A, B)
-	local disconnect_add = attr.on_add(AB_archetype, function(entity)
+	local disconnect_add = archetype_event.bind_add(AB_archetype, function(entity)
 		table.insert(add_calls, entity)
 	end)
 
 	-- Observer for A+B archetype removals
-	local disconnect_remove = attr.on_remove(AB_archetype, function(entity)
+	local disconnect_remove = archetype_event.bind_remove(AB_archetype, function(entity)
 		table.insert(remove_calls, entity)
 	end)
 
@@ -527,7 +528,7 @@ function run.observer_composite_archetype_change()
 
 	-- Observer for A+B archetype changes
 	local AB_archetype = archetype.with_attr(A, B)
-	local disconnect_change = attr.on_change(AB_archetype, function(entity)
+	local disconnect_change = archetype_event.bind_change(AB_archetype, function(entity)
 		table.insert(change_calls, entity)
 	end)
 

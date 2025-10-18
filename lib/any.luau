@@ -57,7 +57,6 @@ local function attr_set<V>(data: attr<V>, key: key, value: V?): ()
 	if prev_value == value then return end
 	local attr_id = ensure_id(data)
 
-	data[id] = value
 	if value == nil and prev_value ~= nil then
 		move_entity_archetype_to_without(tracked, attr_id)
 		data[id] = value

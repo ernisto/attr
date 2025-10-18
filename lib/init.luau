@@ -1,9 +1,9 @@
 local any = require '@self/any'
-local archetype_event = require '@self/archetype_event'
 local cleanup = require '@self/cleanup'
+local entity_archetype = require '@self/entity_archetype'
 local key = require '@self/key'
 local link = require '@self/link'
-local map = require '@self/map'
+local tracker = require '@self/tracker'
 
 export type link_attr = link.link_attr
 export type link1_attr = link.link1
@@ -18,17 +18,18 @@ export type id = key.id
 -- module
 return table.freeze {
 	id_source = key.maybe_source,
+	is_alive = key.maybe_alive,
 	id = key.ensure_id,
 
 	destroy = cleanup.destroy_key,
 	on_destroy = cleanup.on_destroy_key,
 	gc_step = cleanup.destroy_unused_ids,
 
-	on_remove = archetype_event.bind_remove,
-	on_change = archetype_event.bind_change,
-	on_add = archetype_event.bind_add,
-	map = map,
+	on_remove = tracker.on_remove,
+	on_change = tracker.on_change,
+	on_add = tracker.on_add,
 
+	get_attributes = entity_archetype.get_attrs,
 	any = any.new,
 	ref = link.link_N1,
 	xref = link.link_11,
