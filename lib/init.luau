@@ -19,6 +19,7 @@ export type id = key.id
 return table.freeze {
 	id_source = key.maybe_source,
 	is_alive = key.maybe_alive,
+	find_id = key.find_id,
 	id = key.ensure_id,
 
 	destroy = cleanup.destroy_key,

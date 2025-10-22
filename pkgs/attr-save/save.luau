@@ -12,9 +12,12 @@ export type data = { [attr.id]: { [attr_key]: any } }
 export type attr_key = string
 
 -- functions
-local function include_attr(handler: attr.id, attribute: attr.attr<any>, key: attr_key)
+local function include_attr<T>(handler: attr.id, attribute: attr.attr<T>, key: attr_key, serde: serde.property<T>?)
 	saving_attributes:add(handler, attribute)
 	save_key:set(attribute, key)
+
+	if not serde then return end
+	saving_serde:set(attribute, serde)
 end
 local function include_ids(handler: attr.id, attribute: attr.linkN_attr, key: attr_key): attr.id
 	local child_handler = attr.id()

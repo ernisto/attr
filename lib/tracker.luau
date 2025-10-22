@@ -101,7 +101,6 @@ end
 local function on_change(arch: archetype_handle.arch, callback: (key.tracked_id) -> cleanup?): cleanup
 	local arch_id, cleanups, track = get_tracker(arch, callback)
 
-	local disconnect_added = archetype_event.bind_add(arch_id, track)
 	local disconnect_changed = archetype_event.bind_change(arch_id, function(entity)
 		local cleanup = cleanups[alive(entity)]
 		if cleanup ~= nil then cleanup() end
@@ -113,7 +112,6 @@ local function on_change(arch: archetype_handle.arch, callback: (key.tracked_id)
 	end)
 
 	local function disconnect_tracker()
-		disconnect_added()
 		disconnect_changed()
 		disconnect_removed()
 
