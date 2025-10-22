@@ -32,22 +32,22 @@ type id = key.id
 
 -- defs
 local function no_op() end
-
 local backward_link = setmetatable({}, { __mode = 'kv' })
+
 export type link_attr = link1 | linkN
 export type link1 = attr.attr<key, id>
 export type linkN = archetype_handle.arch1<id, {
-	of: (linkN, of: key?) -> archetype_handle.arch1<nil>,
-	remove: (linkN, key, target: key?) -> (),
-	add: (linkN, key, target: key) -> (),
+	of: (any, of: key?) -> archetype_handle.arch1<nil, archetype_handle.base_impl<nil>>,
+	remove: (any, key, target: key?) -> (),
+	add: (any, key, target: key) -> (),
 
-	assert_await: (linkN, key, target: key, message: string?) -> (),
-	assert: (linkN, key, target: key, message: string?) -> (),
-	await: (linkN, key, target: key) -> boolean,
-	has: (linkN, key, target: key) -> boolean,
+	assert_await: (any, key, target: key, message: string?) -> (),
+	assert: (any, key, target: key, message: string?) -> (),
+	await: (any, key, target: key) -> boolean,
+	has: (any, key, target: key) -> boolean,
 
-	iter: (linkN, target: key?) -> () -> id,
-	all: (linkN, of: key?) -> { id },
+	iter: (any, target: key?) -> () -> id,
+	all: (any, of: key?) -> { id },
 }>
 
 -- functions
