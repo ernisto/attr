@@ -6,6 +6,14 @@ local attr = require '@lib'
 
 local run = {}
 
+local function arch_id(...)
+	local ids = {}
+	for i, a in { ... } do
+		ids[i] = attr.id(a)
+	end
+	return archetype.with_attr(unpack(ids))
+end
+
 function run.on_add()
 	local a = attr.any(0)
 	local b = attr.any(0)
@@ -105,6 +113,70 @@ function run.on_change()
 	-- Change should not trigger after disconnection
 	a:set(id, 15)
 	assert(change_calls[3] == nil)
+end
+
+function run.transite_to_descendant_archetypes()
+	local A = attr.any(0)
+	local B = attr.any(0)
+	local C = attr.any(0)
+
+	local calls = {}
+	archetype_event.bind_add(arch_id(A), function(id): ()
+		table.insert(calls, 'A')
+	end)
+	archetype_event.bind_add(arch_id(A, B), function(id): ()
+		table.insert(calls, 'AB')
+	end)
+	archetype_event.bind_add(arch_id(A, B, C), function(id): ()
+		table.insert(calls, 'ABC')
+	end)
+
+	local _, id = attr.id()
+	assert(#calls == 0)
+
+	A:add(id)
+	assert(#calls == 1)
+	assert(calls[1] == 'A')
+
+	B:add(id)
+	assert(#calls == 2)
+	assert(calls[2] == 'AB')
+
+	C:add(id)
+	assert(#calls == 3)
+	assert(calls[3] == 'ABC')
+end
+
+function run.transite_to_2_more_ancestor_observers()
+	local A = attr.any(0)
+	local B = attr.any(0)
+	local C = attr.any(0)
+
+	local calls = {}
+	archetype_event.bind_add(arch_id(A), function(id): ()
+		table.insert(calls, 'A')
+	end)
+	archetype_event.bind_add(arch_id(A, B), function(id): ()
+		table.insert(calls, 'AB')
+	end)
+	archetype_event.bind_add(arch_id(A, B, C), function(id): ()
+		table.insert(calls, 'ABC')
+	end)
+
+	local _, id = attr.id()
+	assert(#calls == 0)
+
+	A:add(id)
+	assert(#calls == 1)
+	assert(calls[1] == 'A')
+
+	C:add(id)
+	assert(#calls == 1, `dont trigger anything`)
+
+	B:add(id)
+	assert(#calls == 3)
+	assert(table.find(calls, 'AB'))
+	assert(table.find(calls, 'ABC'))
 end
 
 function run.multiple_observers()

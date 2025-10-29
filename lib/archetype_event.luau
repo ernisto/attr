@@ -46,7 +46,7 @@ local function event()
 	end
 	local function bind_event(arch: archetype_id, callback: (key.id, any, any) -> ())
 		local sub_archs = {}
-		for sub_arch in archetype.iter_smaller_archetypes(arch) do
+		for sub_arch in archetype.iter_bigger_archetypes(arch) do
 			table.insert(sub_archs, sub_arch)
 		end
 
@@ -66,7 +66,7 @@ local function event()
 			local index = table.find(connection_roots[arch], disconnect)
 			table.remove(connection_roots[arch], index)
 
-			for arch in archetype.iter_smaller_archetypes(arch) do
+			for arch in archetype.iter_bigger_archetypes(arch) do
 				local arch_event = dense_inherited_callbacks[arch]
 				if arch_event == nil then continue end
 
