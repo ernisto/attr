@@ -27,20 +27,22 @@ local receivers_set = {}
 type set<T> = { [T]: true }
 
 local client = attr.any((nil :: any) :: client)
-type client = {}
+type client = any
 
--- commands
 -- ensure attr.id(attribute) is the same for both sides
 -- achieved if both requires component registry first than
 -- another modules which potentially creates more components
 type attribute_id = attr.id
 type attributes = { [attribute_id]: unknown }
 
-local function queue_entity_added(receivers: { client }, entity: attr.id, source: attr.id_source, data: attributes) end
-local function queue_entity_removed(receivers: { client }, entity: attr.id) end
+-- commands
+local commands = {}
 
-local function queue_attribute_changed(receivers: { client }, entity: attr.id, attribute: attr.id, value: unknown) end
-local function queue_attribute_removed(receivers: { client }, entity: attr.id, attribute: attr.id, value: unknown) end
+function commands.entity_added(receivers: { client }, entity: attr.id, source: attr.id_source, data: attributes) end
+function commands.entity_removed(receivers: { client }, entity: attr.id) end
+
+function commands.attribute_changed(receivers: { client }, entity: attr.id, attribute: attr.id, value: unknown) end
+function commands.attribute_removed(receivers: { client }, entity: attr.id, attribute: attr.id) end
 
 -- helpers
 local function get_serialized_value(id: attr.id, attribute_id: attr.id)
@@ -90,7 +92,7 @@ local function bind_sync_group(group: attr.key)
 	attr.on_add(group_receivers:of(group), function(id): ()
 		local receiver = client:assert(id)
 		for id in group_syncing_entities:of(group):iter() do
-			queue_entity_added(all_receivers, id, id_source(id), serialize_synced_attributes(id))
+			commands.entity_added(all_receivers, id, id_source(id), serialize_synced_attributes(id))
 		end
 
 		receivers_set[receiver] = true
@@ -117,17 +119,17 @@ local function sync_attribute<T>(attribute: attr.attr<T>, serde_impl: serde.impl
 
 	attr.on_add(sync_group + attribute, function(id, group, value): ()
 		local ser_value = if serde_impl ~= nil then serialize(id, serde_impl :: any, value) else value
-		queue_attribute_changed(group_all_receivers:assert(group), id, id_for(attribute), ser_value)
+		commands.attribute_changed(group_all_receivers:assert(group), id, id_for(attribute), ser_value)
 	end)
 	attr.on_change(attribute, function(id: attr.id, value): ()
 		local group = sync_group:find(id)
 		if not group then return end
 
 		local ser_value = if serde_impl ~= nil then serialize(id, serde_impl :: any, value) else value
-		queue_attribute_changed(group_all_receivers:assert(group), id, id_for(attribute), ser_value)
+		commands.attribute_changed(group_all_receivers:assert(group), id, id_for(attribute), ser_value)
 	end)
 	attr.on_remove(sync_group + attribute, function(id, group): ()
-		queue_attribute_removed(group_all_receivers:assert(group), id, id_for(attribute))
+		commands.attribute_removed(group_all_receivers:assert(group), id, (id_for(attribute)))
 	end)
 end
 
@@ -146,8 +148,8 @@ local function group_changed(id: attr.id, group_id: attr.id): ()
 	local attributes = serialize_synced_attributes(id)
 	receivers_set[id] = new_receivers_set
 
-	queue_entity_added(added, id, id_source(id), attributes)
-	queue_entity_removed(removed, id)
+	commands.entity_added(added, id, id_source(id), attributes)
+	commands.entity_removed(removed, id)
 end
 
 attr.on_change(sync_group, group_changed :: any)
@@ -156,9 +158,11 @@ attr.on_add(sync_group, group_changed :: any)
 -- module
 return table.freeze {
 	everyone = everyone,
+	commands = commands,
 
 	receivers = group_receivers,
 	group = sync_group,
+	client = client,
 
 	sync_attribute = sync_attribute,
 	bind_group = bind_sync_group,

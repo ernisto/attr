@@ -1,4 +1,4 @@
-local attr = require '../../lib'
+local attr = require '@lib'
 local id_source = attr.id_source
 local destroy = attr.destroy
 local id_for = attr.id
@@ -43,11 +43,11 @@ local function create_server_id(server_id: attr.id, source: attr.id_source, attr
 	return client_id
 end
 
-local function change_component(server_id: attr.id, attr_id: attr.id, serialized_value: unknown)
+local function change_attribute(server_id: attr.id, attr_id: attr.id, serialized_value: unknown)
 	local client_id = client_ids[server_id]
 	apple_deserialized_value(client_id, attr_id, serialized_value)
 end
-local function remove_component(server_id: attr.id, attr_id: attr.id, link_target: attr.id)
+local function remove_attribute(server_id: attr.id, attr_id: attr.id, link_target: attr.id?)
 	local attribute = assert(id_source(attr_id) :: any)
 	attribute:remove(client_ids[server_id], link_target and client_ids[link_target])
 end
@@ -60,7 +60,7 @@ end)
 return table.freeze {
 	destroy_server_id = destroy_server_id,
 	create_server_id = create_server_id,
-	remove_component = remove_component,
-	change_component = change_component,
+	remove_attribute = remove_attribute,
+	change_attribute = change_attribute,
 	server_id = server_ids,
 }
