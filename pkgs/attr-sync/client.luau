@@ -1,5 +1,6 @@
 local attr = require '../../lib'
 local id_source = attr.id_source
+local destroy = attr.destroy
 local id_for = attr.id
 local new_id = attr.id
 
@@ -28,7 +29,7 @@ end
 
 -- events
 local function destroy_server_id(server_id: attr.id)
-	attr.destroy(client_ids[server_id])
+	destroy(client_ids[server_id])
 end
 local function create_server_id(server_id: attr.id, source: attr.id_source, attributes: { [attr.id]: unknown })
 	local client_id = if source then id_for(source) else new_id()

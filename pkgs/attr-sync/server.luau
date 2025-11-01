@@ -16,16 +16,18 @@ local function always_sync(subject: attr.id, receiver: attr.id)
 	return true
 end
 
-local group_all_receivers = attr.any({} :: { receiver })
 local group_receivers = attr.refs()
 local sync_group, group_syncing_entities = attr.ref()
 local sync_filter = attr.any(always_sync)
 
-local prev_receivers_set: { [attr.id]: set<receiver> } = {}
+local group_all_receivers = attr.any({} :: { client })
+local group_receivers_set = attr.any({} :: any)
+
+local receivers_set = {}
 type set<T> = { [T]: true }
 
-local raw_receiver = attr.any((nil :: any) :: receiver)
-type receiver = {}
+local client = attr.any((nil :: any) :: client)
+type client = {}
 
 -- commands
 -- ensure attr.id(attribute) is the same for both sides
@@ -34,17 +36,11 @@ type receiver = {}
 type attribute_id = attr.id
 type attributes = { [attribute_id]: unknown }
 
-local function queue_entity_added(
-	receivers: { receiver },
-	entity: attr.id,
-	source: attr.id_source,
-	data: attributes
-)
-end
-local function queue_entity_removed(receivers: { receiver }, entity: attr.id) end
+local function queue_entity_added(receivers: { client }, entity: attr.id, source: attr.id_source, data: attributes) end
+local function queue_entity_removed(receivers: { client }, entity: attr.id) end
 
-local function queue_attribute_changed(receivers: { receiver }, entity: attr.id, attribute: attr.id, value: unknown) end
-local function queue_attribute_removed(receivers: { receiver }, entity: attr.id, attribute: attr.id, value: unknown) end
+local function queue_attribute_changed(receivers: { client }, entity: attr.id, attribute: attr.id, value: unknown) end
+local function queue_attribute_removed(receivers: { client }, entity: attr.id, attribute: attr.id, value: unknown) end
 
 -- helpers
 local function get_serialized_value(id: attr.id, attribute_id: attr.id)
@@ -60,57 +56,49 @@ local function serialize_synced_attributes(id: attr.id): attributes
 
 	for _, attribute_id in attribute_ids do
 		local should_sync = sync_filter:find(attribute_id)
-		if should_sync == nil then continue end
-
-		attributes[attribute_id] = get_serialized_value(id, attribute_id)
+		if should_sync ~= nil then attributes[attribute_id] = get_serialized_value(id, attribute_id) end
 	end
 	return attributes
 end
-local function get_delta_set(
-	prev_set: set<receiver>,
-	new_arr: { receiver }
-): (set<receiver>, { receiver }, { receiver }, { receiver })
-	local new_set = {}
-	local removed = {}
-	local added = {}
-	local keept = {}
+local function get_delta_set<T>(prev_set: set<T>, new_set: set<T>, new_arr: { T }): ({ T }, { T })
+	local removed, added = {}, {}
 
 	for _, receiver in new_arr do
-		if prev_set[receiver] == nil then
-			table.insert(added, receiver)
-		else
-			table.insert(keept, receiver)
-		end
-		new_set[receiver] = true
+		if prev_set[receiver] == nil then table.insert(added, receiver) end
 	end
 	for receiver in prev_set do
 		if new_set[receiver] == nil then table.insert(removed, receiver) end
 	end
 
-	return new_set :: any, removed, added, keept
+	return removed, added
 end
 
 -- functions
-local function destroy_group(group_id)
+local function destroy_group(group_id: attr.id)
 	for id in group_receivers:iter(group_id) do
-		prev_receivers_set[id] = nil
+		receivers_set[id] = nil
 	end
 end
 local function bind_sync_group(group: attr.key)
 	local all_receivers = {}
+	local receivers_set = {}
+
 	group_all_receivers:set(group, all_receivers)
+	group_receivers_set:set(group, receivers_set)
 
 	attr.on_destroy(group, destroy_group)
 	attr.on_add(group_receivers:of(group), function(id): ()
-		local receiver = raw_receiver:assert(id)
+		local receiver = client:assert(id)
 		for id in group_syncing_entities:of(group):iter() do
 			queue_entity_added(all_receivers, id, id_source(id), serialize_synced_attributes(id))
 		end
 
+		receivers_set[receiver] = true
 		table.insert(all_receivers, receiver)
 	end)
 	attr.on_remove(group_receivers:of(group), function(id): ()
-		local receiver = raw_receiver:assert(id)
+		local receiver = client:assert(id)
+		receivers_set[receiver] = nil
 
 		local index = table.find(all_receivers, receiver)
 		if index then table.remove(all_receivers, index) end
@@ -144,18 +132,26 @@ local function sync_attribute<T>(attribute: attr.attr<T>, serde_impl: serde.impl
 end
 
 -- traits
-local function group_changed(id, group_id)
+local function group_changed(id: attr.id, group_id: attr.id): ()
 	local new_receivers = group_all_receivers:assert(group_id)
-	local new_receivers_set, removed, added = get_delta_set(prev_receivers_set[id] or {}, new_receivers)
+	local new_receivers_set = group_receivers_set:assert(group_id)
+
+	local prev_receivers_set = receivers_set[id]
+	local removed, added = {}, new_receivers
+
+	if prev_receivers_set then
+		removed, added = get_delta_set(prev_receivers_set, new_receivers_set, new_receivers)
+	end
+
 	local attributes = serialize_synced_attributes(id)
+	receivers_set[id] = new_receivers_set
 
 	queue_entity_added(added, id, id_source(id), attributes)
 	queue_entity_removed(removed, id)
-	prev_receivers_set[id] = new_receivers_set
 end
 
-attr.on_change(sync_group, group_changed)
-attr.on_add(sync_group, group_changed)
+attr.on_change(sync_group, group_changed :: any)
+attr.on_add(sync_group, group_changed :: any)
 
 -- module
 return table.freeze {
