@@ -8,11 +8,12 @@ local saving_N_handlers = attr.refs()
 local saving_1_handlers = attr.refs()
 local saving_serde = attr.any({} :: serde.property)
 
+export type serde<T = any> = serde.property<T>
 export type data = { [attr.id]: { [attr_key]: any } }
 export type attr_key = string
 
 -- functions
-local function include_attr<T>(handler: attr.id, attribute: attr.attr<T>, key: attr_key, serde: serde.property<T>?)
+local function include_attr<T>(handler: attr.id, attribute: attr.attr<T>, key: attr_key, serde: serde<T>?)
 	saving_attributes:add(handler, attribute)
 	save_key:set(attribute, key)
 
