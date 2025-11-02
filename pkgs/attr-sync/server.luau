@@ -91,8 +91,11 @@ local function bind_sync_group(group: attr.key)
 	attr.on_destroy(group, destroy_group)
 	attr.on_add(group_receivers:of(group), function(id): ()
 		local receiver = client:assert(id)
+		local new_receiver = { receiver }
+
+		-- todo: batch request
 		for id in group_syncing_entities:of(group):iter() do
-			commands.entity_added(all_receivers, id, id_source(id), serialize_synced_attributes(id))
+			commands.entity_added(new_receiver, id, id_source(id), serialize_synced_attributes(id))
 		end
 
 		receivers_set[receiver] = true
