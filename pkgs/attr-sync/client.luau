@@ -7,33 +7,54 @@ local new_id = attr.id
 local serde = require './serde'
 local deserialize = serde.deserialize
 
+local log = require './log'
 local shared = require './shared'
 local sync_serde_impl = shared.serde
 
 -- vars
-local client_ids = {}
 local server_ids = attr.any(0)
+local link_source = {} -- debug
+local client_ids = {}
 
--- helpers
-local function ensure_client_id_for(server_id: attr.id, source: attr.key?): attr.id
-	if client_ids[server_id] then return client_ids[server_id] end
+-- functions
+local function find_client_id_for(server_id: attr.id, source: attr.key?): attr.id?
+	local client_id = client_ids[server_id]
+	if client_id == nil then return end
 
+	if source ~= nil and client_id ~= id_for(source) then
+		log.warn(
+			log.messages.two_ids_with_same_source(client_id, server_id, id_for(source), source, link_source[client_id])
+		)
+	end
+	return client_id
+end
+local function new_client_id_for(server_id: attr.id, source: attr.key?): attr.id
 	local client_id = if source then id_for(source) else new_id()
 	client_ids[server_id] = client_id
 
 	server_ids:set(client_id, server_id)
 	return client_id
 end
-local function apply_link(client_id, attribute: attr.link1_attr, target_server_id: attr.id)
+local function ensure_client_id_for(server_id: attr.id, source: attr.key?): attr.id
+	return find_client_id_for(server_id, source) or new_client_id_for(server_id, source)
+end
+
+local function apply_link(client_id, link: attr.link1_attr, target_server_id: attr.id)
 	target_server_id = id_for(target_server_id)
 
-	local target_client_id = client_ids[target_server_id]
-	if not target_client_id then
-		print(`[warn] client#{client_id} linking '{attribute}' to a id server#{target_server_id} didnt replicated yet`)
+	local existing_target_client_id = client_ids[target_server_id]
+	local target_client_id = existing_target_client_id or ensure_client_id_for(target_server_id)
+
+	if not existing_target_client_id then
+		local server_id = server_ids[client_id]
+		link_source[target_client_id] = `{server_id}/{client_id}.{link}`
+
+		log.warn(
+			log.messages.instance_linked_before_receive(client_id, server_id, target_client_id, target_server_id, link)
+		)
 	end
 
-	target_client_id = ensure_client_id_for(target_server_id)
-	attribute:set(client_id, target_client_id)
+	link:set(client_id, target_client_id)
 end
 
 local function apply_deserialized_value(client_id, attr_id: attr.id, serialized_value: unknown)
@@ -41,7 +62,7 @@ local function apply_deserialized_value(client_id, attr_id: attr.id, serialized_
 	if attribute.kind == 'link1' then return apply_link(client_id, attribute, serialized_value :: any) end
 
 	local serde_impl = sync_serde_impl:find(attribute)
-	local value = if serde_impl then deserialize(client_id, serde_impl, serialized_value) else serialized_value
+	local value = if serde_impl then deserialize(client_id, serde_impl, serialized_value :: any) else serialized_value
 
 	attribute:set(client_id, value)
 end
@@ -73,9 +94,12 @@ end)
 
 -- module
 return table.freeze {
+	server_id = server_ids,
+	find_client_id_for = find_client_id_for,
+	ensure_client_id_for = ensure_client_id_for,
+
 	destroy_server_id = destroy_server_id,
 	create_server_id = create_server_id,
 	remove_attribute = remove_attribute,
 	change_attribute = change_attribute,
-	server_id = server_ids,
 }
