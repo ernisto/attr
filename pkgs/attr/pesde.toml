@@ -1,0 +1,18 @@
+name = "ernisto/attr"
+version = "0.0.1-alpha.2"
+description = "little ecs lib"
+license = "MIT"
+repository = "https://github.com/ernisto/attr"
+authors = ["ernisto <joaovitordesouza707@gmail.com>"]
+includes = ["pesde.toml", "README.md", "LICENSE", "docs/**/*.md", "lib/**"]
+
+[engines]
+pesde = "^0.7.1"
+lune = "^0.10.2"
+
+[indices]
+default = "https://github.com/pesde-pkg/index"
+
+[target]
+environment = "luau"
+lib = "lib/init.luau"

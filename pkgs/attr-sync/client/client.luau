@@ -1,15 +1,13 @@
-local attr = require '@lib'
+local attr = require './luau_packages/attr'
 local id_source = attr.id_source
 local destroy = attr.destroy
 local id_for = attr.id
 local new_id = attr.id
 
-local serde = require './serde'
-local deserialize = serde.deserialize
-
 local log = require './log'
-local shared = require './shared'
-local sync_serde_impl = shared.serde
+local sync = require './luau_packages/attr_sync'
+local deserialize = sync.deserialize
+local sync_serde_impl = sync.serde
 
 -- vars
 local server_ids = attr.any(0)

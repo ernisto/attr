@@ -1,15 +1,13 @@
-local attr = require '@lib'
+local attr = require './luau_packages/attr'
 local get_attributes = attr.get_attributes
 local id_source = attr.id_source
 local new_id = attr.id
 local id_for = attr.id
 
-local serde = require './serde'
-local serialize = serde.serialize
-
-local shared = require './shared'
-local base_sync_attribute = shared.sync_attribute
-local sync_serde_impl = shared.serde
+local sync = require './luau_packages/attr_sync'
+local base_sync_attribute = sync.sync_attribute
+local sync_serde_impl = sync.serde
+local serialize = sync.serialize
 
 -- defs
 local function always_sync(subject: attr.id, receiver: attr.id)
@@ -116,7 +114,7 @@ local function new_sync_group()
 end
 
 local everyone = new_sync_group()
-local function sync_attribute<T>(attribute: attr.attr<T>, serde_impl: serde.impl<T>?)
+local function sync_attribute<T>(attribute: attr.attr<T>, serde_impl: sync.serde_impl<T>?)
 	sync_filter:set(attribute, always_sync)
 	base_sync_attribute(attribute, serde_impl)
 

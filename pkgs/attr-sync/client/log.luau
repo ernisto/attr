@@ -1,4 +1,4 @@
-local attr = require '@lib'
+local attr = require './luau_packages/attr'
 
 local messages = {}
 export type message = {

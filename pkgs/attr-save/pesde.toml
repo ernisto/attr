@@ -1,0 +1,20 @@
+name = "ernisto/attr_save"
+version = "0.0.1-alpha.2"
+description = "attribute saver for attr"
+license = "MIT"
+repository = "https://github.com/ernisto/attr"
+authors = ["ernisto <joaovitordesouza707@gmail.com>"]
+includes = ["pesde.toml", "README.md", "LICENSE", "docs/**/*.md", "*.luau"]
+
+[engines]
+pesde = "^0.7.1"
+
+[indices]
+default = "https://github.com/pesde-pkg/index"
+
+[target]
+environment = "luau"
+lib = "save.luau"
+
+[dependencies]
+attr = { workspace = "ernisto/attr" }

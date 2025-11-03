@@ -1,4 +1,4 @@
-local attr = require '../../lib'
+local attr = require './luau_packages/attr'
 local serde = require './serde'
 
 local handler_attribute = attr.any(nil :: any)
