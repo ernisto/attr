@@ -2,12 +2,12 @@
 # It is not intended for manual editing.
 format = 2
 name = "ernisto/attr_save"
-version = "0.0.1-alpha.1"
+version = "0.0.1-alpha.2"
 target = "luau"
 
-[graph."ernisto/attr@0.0.1-alpha.1 luau"]
+[graph."ernisto/attr@0.0.1-alpha.2 luau"]
 direct = ["attr", { workspace = "ernisto/attr", version = "^" }, "standard"]
 
-[graph."ernisto/attr@0.0.1-alpha.1 luau".pkg_ref]
+[graph."ernisto/attr@0.0.1-alpha.2 luau".pkg_ref]
 ref_ty = "workspace"
-path = "vendor/attr/pkgs/attr"
+path = "pkgs/attr"

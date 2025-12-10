@@ -2,7 +2,7 @@ name = "attr/root"
 version = "0.0.0"
 private = true
 
-workspace_members = ["pkgs/*"]
+workspace_members = ["pkgs/*", "pkgs/attr-sync/{client,server,shared}"]
 
 [target]
 environment = "luau"
