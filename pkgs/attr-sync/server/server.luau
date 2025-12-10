@@ -118,7 +118,10 @@ local function sync_attribute<T>(attribute: attr.attr<T>, serde_impl: sync.serde
 	sync_filter:set(attribute, always_sync)
 	serde_impl = base_sync_attribute(attribute, serde_impl)
 
-	attr.on_add(sync_group + attribute, function(id, group, value): ()
+	attr.on_add(attribute, function(id, value): ()
+		local group = sync_group:find(id)
+		if not group then return end
+
 		local ser_value = if serde_impl ~= nil then serialize(id, serde_impl :: any, value) else value
 		commands.attribute_changed(group_all_receivers:assert(group), id, id_for(attribute), ser_value)
 	end)
