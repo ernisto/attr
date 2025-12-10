@@ -116,7 +116,7 @@ end
 local everyone = new_sync_group()
 local function sync_attribute<T>(attribute: attr.attr<T>, serde_impl: sync.serde_impl<T>?)
 	sync_filter:set(attribute, always_sync)
-	base_sync_attribute(attribute, serde_impl)
+	serde_impl = base_sync_attribute(attribute, serde_impl)
 
 	attr.on_add(sync_group + attribute, function(id, group, value): ()
 		local ser_value = if serde_impl ~= nil then serialize(id, serde_impl :: any, value) else value
