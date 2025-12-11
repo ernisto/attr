@@ -2,7 +2,6 @@ local key = require './key'
 local maybe_source = key.maybe_source
 local maybe_alive = key.maybe_alive
 local ensure_id = key.ensure_id
-local tracked_id = key.tracked
 local find_id = key.find_id
 type key = key.key
 
@@ -13,6 +12,7 @@ local archetype = require './archetype'
 local match_attributes = archetype.match_attributes
 local attributes = archetype.attributes
 
+local attribute_storages = key.pre_allocated_storage()
 local archetype_ids = key.pre_allocated_storage()
 local excluding = key.pre_allocated_storage()
 
@@ -42,6 +42,7 @@ local function intersect(arch_handle: key, arch2: key): any
 
 	local this_attributes = merge_array(attributes[id1], attributes[id2])
 	local this_excluding = merge_map(excluding[id1], excluding[id2])
+	local this_storages = merge_array(attribute_storages[id1], attribute_storages[id2])
 
 	local ordered_attributes = table.clone(this_attributes)
 	table.sort(ordered_attributes)
@@ -50,6 +51,8 @@ local function intersect(arch_handle: key, arch2: key): any
 
 	excluding[id] = this_excluding
 	attributes[id] = this_attributes
+	archetype_ids[id] = { arch_id }
+	attribute_storages[id] = table.freeze(this_storages)
 	return handle
 end
 local function ignore(arch_handle: key, arch2: key): any
@@ -62,6 +65,7 @@ local function ignore(arch_handle: key, arch2: key): any
 	excluding[id] = merge_array(excluding[id1], excluding[id2], attributes[id2])
 	attributes[id] = attributes[id1]
 	archetype_ids[id] = { archetype_ids[id1] }
+	attribute_storages[id] = attribute_storages[id1]
 	return handle
 end
 local function is_subset(sub: key, super: key): boolean
@@ -89,15 +93,35 @@ end
 local function arch_find(arch_handle: key, key: key): ...any
 	local id = find_id(key)
 	if id == nil then return end
+	local storages = attribute_storages[ensure_id(arch_handle)]
 
-	local attributes = get_attributes(arch_handle)
-	local datas = table.clone(attributes :: any)
-	local storages = {}
+	local a = storages[1]
+	if a == nil then return end
 
-	for i, attribute in attributes do
-		storages[i] = maybe_source(attribute) or {}
-	end
-	for i, storage in storages do
+	local b = storages[2]
+	if b == nil then return a[id] end
+
+	local c = storages[3]
+	if c == nil then return a[id], b[id] end
+
+	local d = storages[4]
+	if d == nil then return a[id], b[id], c[id] end
+
+	local e = storages[5]
+	if e == nil then return a[id], b[id], c[id], d[id] end
+
+	local f = storages[6]
+	if f == nil then return a[id], b[id], c[id], d[id], e[id] end
+
+	local g = storages[7]
+	if g == nil then return a[id], b[id], c[id], d[id], e[id], f[id] end
+
+	local h = storages[8]
+	if h == nil then return a[id], b[id], c[id], d[id], e[id], f[id], g[id] end
+
+	local datas = { a[id], b[id], c[id], d[id], e[id], f[id], g[id], h[id] }
+	for i, storage in attributes do
+		if i <= 8 then continue end
 		datas[i] = storage[id]
 	end
 	return unpack(datas)
@@ -175,6 +199,7 @@ local function handle<T>(data: key.storage<T>): arch1<T>
 	excluding[id] = {}
 	attributes[id] = { id }
 	archetype_ids[id] = { id }
+	attribute_storages[id] = table.freeze { maybe_source(id) }
 
 	-- assert(getmetatable(data) extends arch_impl)
 	return data :: any
@@ -186,6 +211,7 @@ local function handle_id(arch_id: key.id): arch1<nil>
 	archetype_ids[id] = { arch_id }
 	attributes[id] = { arch_id }
 	excluding[id] = {}
+	attribute_storages[id] = table.freeze { maybe_source(id) }
 	return handle
 end
 
