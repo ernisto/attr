@@ -45,7 +45,7 @@ function run.iter_smaller_archetypes_includes_subsets()
 	local AC = arch_attrs(A, C)
 	local ABC = arch_attrs(A, B, C)
 
-	local smaller = collect_iter(entity_archetype.iter_smaller_archetypes(ABC))
+	local smaller = collect_iter(archetype.iter_smaller_archetypes(ABC))
 	local smaller_set = to_set(smaller)
 
 	assert(smaller_set[AB] == true, 'AB is smaller than ABC')
@@ -62,7 +62,7 @@ function run.iter_smaller_archetypes_includes_subsets_without_transition()
 	local AB = arch_attrs(A, B)
 	local ABC = arch_attrs(A, B, C)
 
-	local bigger = collect_iter(entity_archetype.iter_smaller_archetypes(ABC))
+	local bigger = collect_iter(archetype.iter_smaller_archetypes(ABC))
 	local bigger_set = to_set(bigger)
 
 	assert(bigger_set[ABC] == true, 'ABC includes itself')
@@ -81,7 +81,7 @@ function run.iter_bigger_archetypes_includes_supersets()
 	local AC = arch_attrs(A, C)
 	local ABC = arch_attrs(A, B, C)
 
-	local bigger = collect_iter(entity_archetype.iter_bigger_archetypes(AB))
+	local bigger = collect_iter(archetype.iter_bigger_archetypes(AB))
 	local bigger_set = to_set(bigger)
 
 	assert(bigger_set[ABC] == true, 'ABC is bigger than AB')
@@ -97,7 +97,7 @@ function run.iter_bigger_archetypes_includes_subsets_without_transition()
 	local AB = arch_attrs(A, B)
 	local ABC = arch_attrs(A, B, C)
 
-	local bigger = collect_iter(entity_archetype.iter_bigger_archetypes(C))
+	local bigger = collect_iter(archetype.iter_bigger_archetypes(C))
 	local bigger_set = to_set(bigger)
 
 	assert(bigger_set[C] == true, 'C includes itself')
@@ -114,7 +114,7 @@ function run.iter_smaller_archetypes_doesnt_visit_twice()
 	local ABC = archetype.next_archetype_with(AB, C)
 
 	local visited = {}
-	for archetype_id in entity_archetype.iter_smaller_archetypes(ABC) do
+	for archetype_id in archetype.iter_smaller_archetypes(ABC) do
 		assert(
 			not visited[archetype_id],
 			string.format('iter_smaller_archetypes visited archetype %s twice', tostring(archetype_id))
@@ -134,7 +134,7 @@ function run.iter_bigger_archetypes_doesnt_visit_twice()
 	local ABC = archetype.next_archetype_with(AB, C)
 
 	local visited2 = {}
-	for archetype_id in entity_archetype.iter_bigger_archetypes(A) do
+	for archetype_id in archetype.iter_bigger_archetypes(A) do
 		assert(
 			not visited2[archetype_id],
 			string.format('iter_bigger_archetypes visited archetype %s twice', tostring(archetype_id))
@@ -180,16 +180,16 @@ function run.is_a_and_get_attrs()
 	assert(entity_archetype.is_a(e4, BC) == true, 'e4 matches BC superset')
 
 	-- get_attrs returns exactly the tags the entity has
-	local s1 = to_set(entity_archetype.get_attrs(e1))
+	local s1 = to_set(entity_archetype.get_attributes(e1))
 	assert(s1[A] and s1[B] and not s1[C], 'get_attrs(e1) contains A,B only')
 
-	local s2 = to_set(entity_archetype.get_attrs(e2))
+	local s2 = to_set(entity_archetype.get_attributes(e2))
 	assert(s2[B] and s2[C] and not s2[A], 'get_attrs(e2) contains B,C only')
 
-	local s3 = to_set(entity_archetype.get_attrs(e3))
+	local s3 = to_set(entity_archetype.get_attributes(e3))
 	assert(s3[A] and s3[C] and not s3[B], 'get_attrs(e3) contains A, C only')
 
-	local s4 = to_set(entity_archetype.get_attrs(e4))
+	local s4 = to_set(entity_archetype.get_attributes(e4))
 	assert(s4[A] and s4[B] and s4[C], 'get_attrs(e4) contains A, B, C')
 end
 

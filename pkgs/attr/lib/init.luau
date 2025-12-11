@@ -30,7 +30,7 @@ return table.freeze {
 	on_change = tracker.on_change,
 	on_add = tracker.on_add,
 
-	get_attributes = entity_archetype.get_attrs,
+	get_attributes = entity_archetype.get_attributes,
 	any = any.new,
 	ref = link.link_N1,
 	xref = link.link_11,

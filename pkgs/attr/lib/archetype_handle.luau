@@ -6,10 +6,12 @@ local find_id = key.find_id
 type key = key.key
 
 local entity_archetype = require './entity_archetype'
+local iter_archetype_entities = entity_archetype.iter_entities
 local entity_archetype_is_a = entity_archetype.is_a
 
 local archetype = require './archetype'
 local match_attributes = archetype.match_attributes
+local archetype_with_attr = archetype.with_attr
 local attributes = archetype.attributes
 
 local attribute_storages = key.pre_allocated_storage()
@@ -47,11 +49,11 @@ local function intersect(arch_handle: key, arch2: key): any
 	local ordered_attributes = table.clone(this_attributes)
 	table.sort(ordered_attributes)
 
-	local arch_id = archetype.with_attr(unpack(ordered_attributes))
+	local arch_id = archetype_with_attr(unpack(ordered_attributes))
 
-	excluding[id] = this_excluding
-	attributes[id] = this_attributes
-	archetype_ids[id] = { arch_id }
+	excluding[id] = table.freeze(this_excluding)
+	attributes[id] = table.freeze(this_attributes)
+	archetype_ids[id] = table.freeze { arch_id }
 	attribute_storages[id] = table.freeze(this_storages)
 	return handle
 end
@@ -62,8 +64,9 @@ local function ignore(arch_handle: key, arch2: key): any
 	local id1 = ensure_id(arch_handle)
 	local id2 = ensure_id(arch2)
 
-	excluding[id] = merge_array(excluding[id1], excluding[id2], attributes[id2])
+	excluding[id] = table.freeze(merge_array(excluding[id1], excluding[id2], attributes[id2]))
 	attributes[id] = attributes[id1]
+	archetype_ids[id] = archetype_ids[id1]
 	archetype_ids[id] = { archetype_ids[id1] }
 	attribute_storages[id] = attribute_storages[id1]
 	return handle
@@ -75,12 +78,15 @@ end
 local function get_attributes(arch_handle: key)
 	return attributes[ensure_id(arch_handle)]
 end
-local function root_ids(arch_handle: key): { number }
+local function get_excluded_attributes(arch_handle: key)
+	return excluding[ensure_id(arch_handle)]
+end
+local function get_root_ids(arch_handle: key): { number }
 	return archetype_ids[ensure_id(arch_handle)]
 end
 
 local function arch_iter(arch_handle: key): ...any
-	return entity_archetype.iter_entities(archetype_ids[ensure_id(arch_handle)][1])
+	return iter_archetype_entities(get_root_ids(arch_handle)[1])
 end
 local function arch_all(arch_handle: key): { key.id }
 	local entities = {}
@@ -128,7 +134,7 @@ local function arch_find(arch_handle: key, key: key): ...any
 end
 local function arch_has(arch_handle: key, key: key): boolean
 	local id = find_id(key)
-	return id ~= nil and entity_archetype_is_a(id, archetype_ids[ensure_id(arch_handle)][1])
+	return id ~= nil and entity_archetype_is_a(id, get_root_ids(arch_handle)[1])
 end
 
 local function arch_assert_has(arch_handle: key, key: key, message: string?): ()
@@ -163,8 +169,9 @@ end
 
 -- constructor
 archetype_impl = {} :: any
+archetype_impl.excluded_attributes = get_excluded_attributes
 archetype_impl.attributes = get_attributes
-archetype_impl.root_ids = root_ids
+archetype_impl.root_ids = get_root_ids
 
 archetype_impl.assert_await_has = arch_assert_await_has
 archetype_impl.assert_await = arch_assert_await
@@ -193,12 +200,12 @@ archetype_impl.__metatable = 'locked'
 table.freeze(archetype_impl)
 
 local function handle<T>(data: key.storage<T>): arch1<T>
-	local id = key.ensure_id(data)
-	archetype.with_attr(id)
+	local id = ensure_id(data)
+	archetype_with_attr(id)
 
-	excluding[id] = {}
-	attributes[id] = { id }
-	archetype_ids[id] = { id }
+	excluding[id] = table.freeze {}
+	attributes[id] = table.freeze { id }
+	archetype_ids[id] = table.freeze { id }
 	attribute_storages[id] = table.freeze { maybe_source(id) }
 
 	-- assert(getmetatable(data) extends arch_impl)
@@ -208,9 +215,9 @@ local function handle_id(arch_id: key.id): arch1<nil>
 	local handle = setmetatable({}, archetype_impl) :: any
 	local id = ensure_id(handle)
 
-	archetype_ids[id] = { arch_id }
-	attributes[id] = { arch_id }
-	excluding[id] = {}
+	excluding[id] = table.freeze {}
+	attributes[id] = table.freeze { arch_id }
+	archetype_ids[id] = table.freeze { arch_id }
 	attribute_storages[id] = table.freeze { maybe_source(id) }
 	return handle
 end
@@ -239,6 +246,7 @@ type base_arch<api = any, add = () -> (), T... = ()> = typeof(setmetatable(
 		is_subset: (any, any) -> boolean,
 		is_superset: (any, any) -> boolean,
 
+		excluded_attributes: (any) -> { [key.id]: true },
 		attributes: (any) -> { key.id },
 		root_ids: (any) -> { key.id },
 	},
@@ -291,7 +299,7 @@ export type arch<A = any, B = nil, C = nil, D = nil, E = nil, F = nil, G = nil, 
 -- module
 return table.freeze {
 	impl = archetype_impl,
-	get_archetype_ids = root_ids,
+	get_archetype_ids = get_root_ids,
 	handle_id = handle_id,
 	handle = handle,
 }

@@ -22,6 +22,12 @@ local archetypes_with_transition_of = {}
 local function has_attribute(archetype: archetype_id, required: attribute_id)
 	return ordered_find(attributes[archetype], required) ~= nil
 end
+local function has_some_attribute(archetype: archetype_id, map: { [attribute_id]: true })
+	for _, attribute in attributes[archetype] do
+		if map[attribute] then return true end
+	end
+	return false
+end
 local function match_attributes(attributes: { attribute_id }, required_attributes: { attribute_id }): boolean
 	local match_goal = #required_attributes
 	if #attributes <= match_goal then return false end
@@ -249,6 +255,7 @@ end
 return table.freeze {
 	get_only_1_extra_attribute = match_only_1_extra_attribute,
 	match_attributes = match_attributes,
+	has_some_attribute = has_some_attribute,
 	has_attribute = has_attribute,
 	attributes = attributes,
 

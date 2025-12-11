@@ -1,4 +1,6 @@
-local archetype = require('./archetype')
+local archetype = require './archetype'
+local archetype_attributes = archetype.attributes
+
 local entity_archetype = require './entity_archetype'
 local remove_entity_archetype = entity_archetype.remove
 
@@ -7,6 +9,7 @@ local maybe_alive_id = key.maybe_alive
 local ensure_id = key.ensure_id
 local free_id = key.free_id
 local find_id = key.find_id
+local id_sources = key.id_sources
 type id = key.id
 
 type cleanup = key.tracked_id | (key.tracked_id) -> ()
@@ -58,10 +61,10 @@ local function destroy_unused_ids(): ()
 	local collected_ids = last_alive
 
 	-- archetypes have internal strong references
-	for id in archetype.attributes do
+	for id in archetype_attributes do
 		collected_ids[id] = nil
 	end
-	for id in key.id_sources do
+	for id in id_sources do
 		collected_ids[id] = nil
 	end
 
@@ -71,7 +74,7 @@ local function destroy_unused_ids(): ()
 
 	-- snapshot for next frame
 	last_alive = {}
-	for id in key.id_sources do
+	for id in id_sources do
 		last_alive[id] = true
 	end
 end

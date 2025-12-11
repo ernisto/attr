@@ -1,4 +1,6 @@
 local archetype = require './archetype'
+local iter_smaller_archetypes = archetype.iter_smaller_archetypes
+local iter_bigger_archetypes = archetype.iter_bigger_archetypes
 local archetype_attributes = archetype.attributes
 
 local key = require './key'
@@ -23,7 +25,7 @@ local function event()
 		dense_inherited_callbacks[arch] = arch_event or { [attr] = callbacks }
 		dense_inherited_callbacks[arch][attr] = callbacks
 
-		for sub_arch in archetype.iter_smaller_archetypes(arch, { [attr] = true :: any }) do
+		for sub_arch in iter_smaller_archetypes(arch, { [attr] = true :: any }) do
 			local sub_callbacks = find_dense_inherited_callbacks(sub_arch, attr)
 			if sub_callbacks == nil then continue end
 
@@ -46,7 +48,7 @@ local function event()
 	end
 	local function bind_event(arch: archetype_id, callback: (key.id, any, any) -> ())
 		local sub_archs = {}
-		for sub_arch in archetype.iter_bigger_archetypes(arch) do
+		for sub_arch in iter_bigger_archetypes(arch) do
 			table.insert(sub_archs, sub_arch)
 		end
 
@@ -66,7 +68,7 @@ local function event()
 			local index = table.find(connection_roots[arch], disconnect)
 			table.remove(connection_roots[arch], index)
 
-			for arch in archetype.iter_bigger_archetypes(arch) do
+			for arch in iter_bigger_archetypes(arch) do
 				local arch_event = dense_inherited_callbacks[arch]
 				if arch_event == nil then continue end
 

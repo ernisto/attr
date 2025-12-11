@@ -8,16 +8,19 @@ local free_id = key.free_id
 local alive = key.unsafe_alive
 
 local archetype_event = require './archetype_event'
+local archetype_connection_roots = archetype_event.connection_roots
 local fire_removed_event = archetype_event.fire_remove
 local fire_added_event = archetype_event.fire_add
 
-local graph = require './archetype'
-local next_archetype_without = graph.next_archetype_without
-local next_archetype_with = graph.next_archetype_with
-local archetype_has_attribute = graph.has_attribute
-local reset_transitions = graph.reset_transitions
-local match_attributes = graph.match_attributes
-local attributes = graph.attributes
+local archetype = require './archetype'
+local iter_bigger_archetypes = archetype.iter_bigger_archetypes
+local next_archetype_without = archetype.next_archetype_without
+local next_archetype_with = archetype.next_archetype_with
+local archetype_has_some_attribute = archetype.has_some_attribute
+local archetype_has_attribute = archetype.has_attribute
+local reset_transitions = archetype.reset_transitions
+local match_attributes = archetype.match_attributes
+local attributes = archetype.attributes
 
 -- defs
 type archetype_id = key.id
@@ -26,7 +29,7 @@ type entity_id = key.tracked_id
 
 -- functions
 local function iter_entities(root_archetype: archetype_id, exclude: { [attribute_id]: true }?): () -> key.tracked_id?
-	local next_compatible_archetype = graph.iter_bigger_archetypes(root_archetype, exclude)
+	local next_compatible_archetype = iter_bigger_archetypes(root_archetype, exclude)
 	local archetype = next_compatible_archetype()
 	local next_entity = archetype and head_id[archetype]
 
@@ -70,8 +73,8 @@ local function set_entity_archetype(entity: key.tracked_id, new_archetype: arche
 	if new_archetype ~= nil then add_archetype_entity(new_archetype, entity) end
 	current_archetype[alive(entity)] = new_archetype :: any
 end
-local function get_entity_archetype(id: entity_id): archetype_id?
-	return current_archetype[alive(id)]
+local function get_entity_archetype(entity: entity_id): archetype_id?
+	return current_archetype[alive(entity)]
 end
 
 local function move_entity_to_with(entity: key.tracked_id, added: attribute_id): archetype_id
@@ -100,13 +103,18 @@ local function entity_is_a(entity: key.tracked_id, base_archetype: archetype_id)
 
 	return match_attributes(attributes[archetype], attributes[base_archetype])
 end
-local function get_entity_attrs(entity: key.tracked_id): { attribute_id }
+local function get_entity_attributes(entity: key.tracked_id): { attribute_id }
 	local archetype = get_entity_archetype(entity)
 	return if archetype then attributes[archetype] else {}
 end
-local function entity_has_attr(entity: entity_id, attribute: attribute_id)
+
+local function entity_has_attribute(entity: entity_id, attribute: attribute_id)
 	local archetype = get_entity_archetype(entity)
 	return archetype ~= nil and archetype_has_attribute(archetype, attribute)
+end
+local function entity_has_some_attribute(entity: entity_id, map: { [attribute_id]: true })
+	local archetype = get_entity_archetype(entity)
+	return archetype ~= nil and archetype_has_some_attribute(archetype, map)
 end
 
 local function remove_entity_archetype(entity: key.tracked_id)
@@ -131,12 +139,12 @@ local function destroy_attribute(attribute: attribute_id)
 	end
 
 	local bigger_archetypes = {}
-	for archetype in graph.iter_bigger_archetypes(attribute) do
+	for archetype in iter_bigger_archetypes(attribute) do
 		table.insert(bigger_archetypes, archetype)
 	end
 
 	for _, archetype in bigger_archetypes do
-		local connections = archetype_event.connection_roots[archetype]
+		local connections = archetype_connection_roots[archetype]
 		if connections == nil then return end
 
 		for _, disconnect in connections do
@@ -151,19 +159,14 @@ end
 
 -- module
 return table.freeze {
-	iter_smaller_archetypes = graph.iter_smaller_archetypes,
-	iter_bigger_archetypes = graph.iter_bigger_archetypes,
-
 	iter_entities = iter_entities,
-
-	-- attribute
 	destroy_attribute = destroy_attribute,
-	attributes = attributes,
 
 	-- entity
 	remove = remove_entity_archetype,
-	get_attrs = get_entity_attrs,
-	has_attribute = entity_has_attr,
+	get_attributes = get_entity_attributes,
+	has_some_attribute = entity_has_some_attribute,
+	has_attribute = entity_has_attribute,
 	is_a = entity_is_a,
 
 	move_to_without = move_entity_to_without,

@@ -1,5 +1,9 @@
-local archetype_event = require './archetype_event'
 local archetype_handle = require './archetype_handle'
+
+local archetype_event = require './archetype_event'
+local bind_remove = archetype_event.bind_remove
+local bind_change = archetype_event.bind_change
+local bind_add = archetype_event.bind_add
 
 local key = require './key'
 local assert_alive_id = key.assert_alive
@@ -31,7 +35,7 @@ local function get_tracker(arch: archetype_handle.arch, callback: (key.id, ...an
 	local a, b, c, d, e, f, g, h = unpack(storages)
 	return arch_id,
 		cleanups,
-		if read_amount == 0
+		(if read_amount == 0
 			then function(entity)
 				local i = alive(entity)
 				cleanups[i] = callback(entity)
@@ -75,22 +79,23 @@ local function get_tracker(arch: archetype_handle.arch, callback: (key.id, ...an
 					datas[i] = storages[i][index]
 				end
 				cleanups[index] = callback(entity, unpack(datas, 1, read_amount))
-			end
+			end) :: (entity: key.tracked_id) -> ()
 end
 
 -- functions
 local function on_add(arch: archetype_handle.arch, callback: (key.tracked_id) -> cleanup?): cleanup
 	local arch_id, cleanups, track = get_tracker(arch, callback)
-
-	local disconnect_added = archetype_event.bind_add(arch_id, track)
-	local disconnect_removed = archetype_event.bind_remove(arch_id, function(entity)
-		local cleanup = cleanups[alive(entity)]
+	local function remove(id)
+		local cleanup = cleanups[alive(id)]
 		if cleanup ~= nil then cleanup() end
-	end)
+	end
+
+	local d1 = bind_add(arch_id, track)
+	local d2 = bind_remove(arch_id, remove)
 
 	local function disconnect_tracker()
-		disconnect_added()
-		disconnect_removed()
+		d1()
+		d2()
 
 		for index, cleanup in cleanups do
 			cleanup()
@@ -100,20 +105,20 @@ local function on_add(arch: archetype_handle.arch, callback: (key.tracked_id) ->
 end
 local function on_change(arch: archetype_handle.arch, callback: (key.tracked_id) -> cleanup?): cleanup
 	local arch_id, cleanups, track = get_tracker(arch, callback)
+	local function remove(entity)
+		local cleanup = cleanups[alive(entity)]
+		if cleanup ~= nil then cleanup() end
+	end
 
-	local disconnect_changed = archetype_event.bind_change(arch_id, function(entity)
-		local cleanup = cleanups[alive(entity)]
-		if cleanup ~= nil then cleanup() end
-		(track :: any)(entity)
-	end)
-	local disconnect_removed = archetype_event.bind_remove(arch_id, function(entity)
-		local cleanup = cleanups[alive(entity)]
-		if cleanup ~= nil then cleanup() end
+	local d1 = bind_remove(arch_id, remove)
+	local d2 = bind_change(arch_id, function(entity)
+		remove(entity)
+		track(entity)
 	end)
 
 	local function disconnect_tracker()
-		disconnect_changed()
-		disconnect_removed()
+		d1()
+		d2()
 
 		for index, cleanup in cleanups do
 			cleanup()
@@ -123,7 +128,7 @@ local function on_change(arch: archetype_handle.arch, callback: (key.tracked_id)
 end
 local function on_remove(arch: archetype_handle.arch, callback: (key.tracked_id) -> cleanup?): cleanup
 	local arch_id, cleanups, track = get_tracker(arch, callback)
-	local disconnect_removed = archetype_event.bind_remove(arch_id, track)
+	local disconnect_removed = bind_remove(arch_id, track)
 
 	local function disconnect_tracker()
 		disconnect_removed()
