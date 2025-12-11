@@ -5,9 +5,9 @@ name = "ernisto/attr_save"
 version = "0.0.1-alpha.2"
 target = "luau"
 
-[graph."ernisto/attr@0.0.1-alpha.2 luau"]
+[graph."ernisto/attr@0.0.1-alpha.3 luau"]
 direct = ["attr", { workspace = "ernisto/attr", version = "^" }, "standard"]
 
-[graph."ernisto/attr@0.0.1-alpha.2 luau".pkg_ref]
+[graph."ernisto/attr@0.0.1-alpha.3 luau".pkg_ref]
 ref_ty = "workspace"
 path = "pkgs/attr"
