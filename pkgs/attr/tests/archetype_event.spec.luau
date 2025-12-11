@@ -630,4 +630,61 @@ function run.observer_composite_archetype_change()
 	disconnect_change()
 end
 
+function run.ancestor_link_without_child_link()
+	-- A \
+	--    AB \
+	-- B /    ABC -- observer here must inherit C observers, even without AC or BC
+	--
+	-- C  -- observer here
+
+	local a = attr.any(0)
+	local b = attr.any(0)
+	local c = attr.any(0)
+	local A = attr.id(a)
+	local B = attr.id(b)
+	local C = attr.id(c)
+
+	local calls_c = {}
+	local calls_abc = {}
+
+	-- Observer for C archetype (entities with *only* C)
+	local archetype_c = archetype.with_attr(C)
+	local disconnect_c = archetype_event.bind_add(archetype_c, function(entity)
+		table.insert(calls_c, { kind = 'C', entity = entity })
+	end)
+
+	-- Observer for ABC archetype (entities with A, B, and C)
+	local archetype_abc = archetype.with_attr(A, B, C)
+	local disconnect_abc = archetype_event.bind_add(archetype_abc, function(entity)
+		table.insert(calls_abc, { kind = 'ABC', entity = entity })
+	end)
+
+	-- Now: an observer for ABC should inherit C observers
+
+	-- Create an entity and add A, B, C stepwise
+	local _, id = attr.id()
+	a:add(id)
+	b:add(id)
+	c:add(id) -- Entity has A+B+C, enters archetype ABC
+
+	-- The ABC observer should be called
+	assert(#calls_abc == 1)
+	assert(#calls_c == 1)
+
+	-- Another test
+	a:remove(id)
+	b:remove(id)
+	-- Entity enters archetype C
+
+	assert(#calls_c == 1)
+	assert(calls_c[1].entity == id)
+
+	-- Remove C so entity has none left (leave clean for future tests)
+	c:remove(id)
+
+	-- Clean up
+	disconnect_c()
+	disconnect_abc()
+end
+
 return run
