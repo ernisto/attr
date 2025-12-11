@@ -50,7 +50,6 @@ local function intersect(arch_handle: key, arch2: key): any
 
 	excluding[id] = this_excluding
 	attributes[id] = this_attributes
-	archetype_ids[id] = { tracked_id(arch_id) }
 	return handle
 end
 local function ignore(arch_handle: key, arch2: key): any
