@@ -24,12 +24,19 @@ local function merge_array(arr1, arr2, ...)
 	table.move(arr2, 1, #arr2, #out + 1, out)
 	return if ... then merge_array(out, ...) else out
 end
-local function merge_map(tab1, tab2)
+local function merge_set(tab1, tab2, ...)
 	local out = table.clone(tab1)
 	for i, v in tab2 do
 		out[i] = v
 	end
-	return out
+	return if ... then merge_set(out, ...) else out
+end
+local function array_to_set<T>(arr: { T }): { [T]: true }
+	local set = {}
+	for _, value in arr do
+		set[value] = true
+	end
+	return set :: any
 end
 
 -- methods
@@ -43,7 +50,7 @@ local function intersect(arch_handle: key, arch2: key): any
 	local id2 = ensure_id(arch2)
 
 	local this_attributes = merge_array(attributes[id1], attributes[id2])
-	local this_excluding = merge_map(excluding[id1], excluding[id2])
+	local this_excluding = merge_set(excluding[id1], excluding[id2])
 	local this_storages = merge_array(attribute_storages[id1], attribute_storages[id2])
 
 	local ordered_attributes = table.clone(this_attributes)
@@ -64,14 +71,14 @@ local function ignore(arch_handle: key, arch2: key): any
 	local id1 = ensure_id(arch_handle)
 	local id2 = ensure_id(arch2)
 
-	excluding[id] = table.freeze(merge_array(excluding[id1], excluding[id2], attributes[id2]))
+	excluding[id] = table.freeze(merge_set(excluding[id1], excluding[id2], array_to_set(attributes[id2])))
 	attributes[id] = attributes[id1]
 	archetype_ids[id] = archetype_ids[id1]
-	archetype_ids[id] = { archetype_ids[id1] }
 	attribute_storages[id] = attribute_storages[id1]
 	return handle
 end
 local function is_subset(sub: key, super: key): boolean
+	assert(#excluding[ensure_id(sub)] == 0 and #excluding[ensure_id(super)] == 0, 'not implemented yet')
 	return match_attributes(attributes[ensure_id(super)], attributes[ensure_id(sub)])
 end
 
@@ -84,9 +91,12 @@ end
 local function get_root_ids(arch_handle: key): { number }
 	return archetype_ids[ensure_id(arch_handle)]
 end
+local function get_root_excluded_ids(arch_handle: key): { number }
+	return { archetype_with_attr(unpack(get_excluded_attributes())) }
+end
 
 local function arch_iter(arch_handle: key): ...any
-	return iter_archetype_entities(get_root_ids(arch_handle)[1])
+	return iter_archetype_entities(get_root_ids(arch_handle)[1], get_excluded_attributes(arch_handle))
 end
 local function arch_all(arch_handle: key): { key.id }
 	local entities = {}
@@ -134,7 +144,12 @@ local function arch_find(arch_handle: key, key: key): ...any
 end
 local function arch_has(arch_handle: key, key: key): boolean
 	local id = find_id(key)
-	return id ~= nil and entity_archetype_is_a(id, get_root_ids(arch_handle)[1])
+	return id ~= nil
+		and entity_archetype_is_a(id, get_root_ids(arch_handle)[1])
+		and (
+			#get_excluded_attributes(arch_handle) == 0
+			or not entity_archetype_is_a(id, get_root_excluded_ids(arch_handle)[1])
+		)
 end
 
 local function arch_assert_has(arch_handle: key, key: key, message: string?): ()
