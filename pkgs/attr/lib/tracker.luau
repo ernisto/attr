@@ -22,7 +22,7 @@ local function get_tracker(arch: archetype_handle.arch, callback: (key.id, ...an
 	local attributes = arch:attributes()
 
 	local param_count: number, is_variadic = debug.info(callback, 'a')
-	local read_amount = math.min(#attributes, if is_variadic then 1 / 0 else param_count - 1)
+	local read_amount = math.clamp(if is_variadic then 1 / 0 else param_count - 1, 0, #attributes)
 
 	local storages = {}
 	for i = 1, read_amount do
