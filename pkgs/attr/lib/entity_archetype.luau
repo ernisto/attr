@@ -18,7 +18,7 @@ local next_archetype_without = archetype.next_archetype_without
 local next_archetype_with = archetype.next_archetype_with
 local archetype_has_some_attribute = archetype.has_some_attribute
 local archetype_has_attribute = archetype.has_attribute
-local reset_transitions = archetype.reset_transitions
+local unbind_transitions = archetype.unbind_transitions
 local match_attributes = archetype.match_attributes
 local attributes = archetype.attributes
 
@@ -145,7 +145,7 @@ local function destroy_attribute(attribute: attribute_id)
 
 	for _, archetype in bigger_archetypes do
 		head_id[archetype] = nil
-		reset_transitions(archetype)
+		unbind_transitions(archetype)
 		free_id(archetype)
 
 		local connections = archetype_connection_roots[archetype]

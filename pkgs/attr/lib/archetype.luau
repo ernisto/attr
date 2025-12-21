@@ -230,7 +230,7 @@ local function with_attr(...: attribute_id): archetype_id
 	end
 	return archetype
 end
-local function reset_transitions(arch: archetype_id)
+local function unbind_transitions(arch: archetype_id)
 	for attribute, prev_arch in with_removed[arch] do
 		with_added[prev_arch][attribute] = nil
 		local attribute_transitions = archetypes_with_transition_of[attribute]
@@ -269,5 +269,5 @@ return table.freeze {
 	iter_bigger_archetypes = iter_bigger_archetypes,
 
 	with_attr = with_attr,
-	reset_transitions = reset_transitions,
+	unbind_transitions = unbind_transitions,
 }
