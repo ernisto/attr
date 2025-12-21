@@ -144,16 +144,16 @@ local function destroy_attribute(attribute: attribute_id)
 	end
 
 	for _, archetype in bigger_archetypes do
+		head_id[archetype] = nil
+		reset_transitions(archetype)
+		free_id(archetype)
+
 		local connections = archetype_connection_roots[archetype]
-		if connections == nil then return end
+		if connections == nil then continue end
 
 		for _, disconnect in connections do
 			disconnect()
 		end
-
-		head_id[archetype] = nil
-		reset_transitions(archetype)
-		free_id(archetype)
 	end
 end
 
