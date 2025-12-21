@@ -1,7 +1,10 @@
 --!nolint LocalUnused
-local archetype = require '@lib/archetype'
 local attr = require '@lib'
 local entity_archetype = require '@lib/entity_archetype'
+
+local archetype = require '@lib/archetype'
+local next_archetype_with = archetype.next_archetype_with
+local next_archetype_without = archetype.next_archetype_without
 
 local run, focus, skip = {}, {}, {}
 
@@ -20,6 +23,17 @@ local function entity(...: attr.attr<boolean>)
 end
 local arch_attrs = archetype.with_attr
 
+local function assert_unordered_array<E>(arr: { E }, expecteds: { E })
+	local missing = table.clone(arr)
+	for _, e in expecteds do
+		local index = table.find(missing, e)
+		assert(index, `not found element '{e}'`)
+		table.remove(missing, index)
+	end
+
+	assert(#missing == 0, `theres extra elements {table.concat(missing, ', ')}`)
+	return true
+end
 local function to_set(arr)
 	local s = {}
 	for _, v in arr do
@@ -34,6 +48,12 @@ local function collect_iter(iter)
 		table.insert(result, item)
 	end
 	return result
+end
+local function all_smaller_archetypes(arch: number)
+	return collect_iter(archetype.iter_smaller_archetypes(arch))
+end
+local function all_bigger_archetypes(arch: number)
+	return collect_iter(archetype.iter_bigger_archetypes(arch))
 end
 
 function run.iter_smaller_archetypes_includes_subsets()
@@ -348,6 +368,41 @@ function run.edge_cases_and_error_handling()
 	attr.destroy(e)
 	assert(entity_archetype.get(e) == nil, 'destroyed entity has no archetype')
 	assert(entity_archetype.is_a(e, A) == false, 'destroyed entity is not A')
+end
+
+-- must to identify all these (archetype)
+--  a  ┐
+--     ├  ab  ┐
+--  b  ┘      └  abc  ┐
+--                    ├ (abcD)
+--  c           (bcD) ┘
+--
+-- (D)
+function run.bigger_archetypes_edge_cases_with_remotion()
+	local a, A = tag()
+	local b, B = tag()
+	local c, C = tag()
+	local d, D = tag()
+
+	local AB = next_archetype_with(A, B)
+	local ABC = next_archetype_with(AB, C)
+	local ABCD = next_archetype_with(ABC, D)
+	local BCD = next_archetype_without(ABCD, A)
+
+	assert_unordered_array(all_bigger_archetypes(D), { D, ABCD, BCD })
+end
+function run.smaller_archetype_edge_cases_with_remotion()
+	local a, A = tag()
+	local b, B = tag()
+	local c, C = tag()
+	local d, D = tag()
+
+	local AB = next_archetype_with(A, B)
+	local ABC = next_archetype_with(AB, C)
+	local ABCD = next_archetype_with(ABC, D)
+	local BCD = next_archetype_without(ABCD, A)
+
+	assert_unordered_array(all_smaller_archetypes(ABCD), { A, B, C, D, AB, ABC, BCD, ABCD })
 end
 
 return { run = run, skip = skip, focus = focus }
