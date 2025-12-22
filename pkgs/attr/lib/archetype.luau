@@ -168,7 +168,10 @@ local function iter_smaller_archetypes(archetype: archetype_id, with: { [attribu
 	local index = 1
 
 	local this_attributes = attributes[archetype]
+	local attributes_set = {}
+
 	for _, attribute in this_attributes do
+		attributes_set[attribute] = true
 		if archetypes_with_transition_of[attribute] == nil then continue end
 		for _, next_archetype in archetypes_with_transition_of[attribute] do
 			if not match_attributes(this_attributes, attributes[next_archetype]) then continue end
@@ -182,12 +185,22 @@ local function iter_smaller_archetypes(archetype: archetype_id, with: { [attribu
 		local compatible_archetype = pending[index]
 		if compatible_archetype == nil then return nil :: any end
 
-		for removed_attr, new_archetype in with_removed[compatible_archetype] do
+		-- search natural smaller archetypes
+		for removed_attr, prev_archetype in with_removed[compatible_archetype] do
 			if with and with[removed_attr] then continue end
-			if already_queued[new_archetype] then continue end
-			already_queued[new_archetype] = true
-			table.insert(pending, new_archetype)
+			if already_queued[prev_archetype] then continue end
+			already_queued[prev_archetype] = true
+			table.insert(pending, prev_archetype)
 		end
+
+		-- allow search brother archetypes
+		for added_attr, next_archetype in with_added[compatible_archetype] do
+			if not attributes_set[added_attr] then continue end
+			if already_queued[next_archetype] then continue end
+			already_queued[next_archetype] = true
+			table.insert(pending, next_archetype)
+		end
+
 		index += 1
 		return compatible_archetype
 	end
@@ -197,8 +210,12 @@ local function iter_bigger_archetypes(archetype: archetype_id, without: { [attri
 	local pending = { archetype }
 	local index = 1
 
+	local attributes_set = {}
 	local this_attributes = attributes[archetype]
+
+	-- get sparse with_added[attribute]
 	for _, attribute in this_attributes do
+		attributes_set[attribute] = true
 		if archetypes_with_transition_of[attribute] == nil then continue end
 		for _, next_archetype in archetypes_with_transition_of[attribute] do
 			if not match_attributes(attributes[next_archetype], this_attributes) then continue end
@@ -212,12 +229,22 @@ local function iter_bigger_archetypes(archetype: archetype_id, without: { [attri
 		local compatible_archetype = pending[index]
 		if compatible_archetype == nil then return nil :: any end
 
-		for added_attr, new_archetype in with_added[compatible_archetype] do
+		-- get natural bigger archetypes
+		for added_attr, next_archetype in with_added[compatible_archetype] do
 			if without and without[added_attr] then continue end
-			if already_queued[new_archetype] then continue end
-			already_queued[new_archetype] = true
-			table.insert(pending, new_archetype)
+			if already_queued[next_archetype] then continue end
+			already_queued[next_archetype] = true
+			table.insert(pending, next_archetype)
 		end
+
+		-- allow search brother archetypes
+		for removed_attr, prev_archetype in with_removed[compatible_archetype] do
+			if attributes_set[removed_attr] then continue end
+			if already_queued[prev_archetype] then continue end
+			already_queued[prev_archetype] = true
+			table.insert(pending, prev_archetype)
+		end
+
 		index += 1
 		return compatible_archetype
 	end
