@@ -5,10 +5,10 @@ name = "ernisto/attr_sync_server"
 version = "0.0.1-alpha.3"
 target = "luau"
 
-[graph."ernisto/attr@0.0.1-alpha.4 luau"]
+[graph."ernisto/attr@0.0.1-alpha.5 luau"]
 direct = ["attr", { workspace = "ernisto/attr", version = "^" }, "standard"]
 
-[graph."ernisto/attr@0.0.1-alpha.4 luau".pkg_ref]
+[graph."ernisto/attr@0.0.1-alpha.5 luau".pkg_ref]
 ref_ty = "workspace"
 path = "pkgs/attr"
 
@@ -16,7 +16,7 @@ path = "pkgs/attr"
 direct = ["attr_sync", { workspace = "ernisto/attr_sync", version = "^" }, "standard"]
 
 [graph."ernisto/attr_sync@0.0.1-alpha.3 luau".dependencies]
-attr = ["ernisto/attr@0.0.1-alpha.4 luau", "standard"]
+attr = ["ernisto/attr@0.0.1-alpha.5 luau", "standard"]
 
 [graph."ernisto/attr_sync@0.0.1-alpha.3 luau".pkg_ref]
 ref_ty = "workspace"
