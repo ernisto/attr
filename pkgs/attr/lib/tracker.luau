@@ -93,6 +93,10 @@ local function on_add(arch: archetype_handle.arch, callback: (key.tracked_id) ->
 	local d1 = bind_add(arch_id, track)
 	local d2 = bind_remove(arch_id, remove)
 
+	for entity in arch:iter() do
+		track(entity)
+	end
+
 	local function disconnect_tracker()
 		d1()
 		d2()
