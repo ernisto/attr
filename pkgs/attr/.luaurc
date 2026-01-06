@@ -1,6 +1,5 @@
 {
-  "languageMode": "strict",
   "aliases": {
-    "lib": "lib"
+    "lib": "./lib"
   }
 }
