@@ -153,85 +153,77 @@ local function arch_iter(arch_handle: key): ...any
 	end
 	error('not implemented')
 end
-local function arch_all(arch_handle: key): ({ key.id }, ...{ any })
-	local next_entity = arch_iter(arch_handle)
+local function arch_bulk_find(arch_handle: key, entities: { key.id }): ...{ any }
 	local storages = attribute_storages[ensure_id(arch_handle)]
 
-	local entities = {}
 	local a = storages[1]
-	if a == nil then return next_entity end
+	if a == nil then return end
 
 	local dense_a = {}
 	local b = storages[2]
 	if b == nil then
-		for id in next_entity do
+		for id in entities do
 			local x = ensure_id(id)
-			table.insert(entities, id)
 			table.insert(dense_a, a[x])
 		end
-		return entities, dense_a
+		return dense_a
 	end
 
 	local dense_b = {}
 	local c = storages[3]
 	if c == nil then
-		for id in next_entity do
+		for id in entities do
 			local x = ensure_id(id)
-			table.insert(entities, id)
 			table.insert(dense_a, a[x])
 			table.insert(dense_b, b[x])
 		end
-		return entities, dense_a, dense_b
+		return dense_a, dense_b
 	end
 
 	local dense_c = {}
 	local d = storages[4]
 	if d == nil then
-		for id in next_entity do
+		for id in entities do
 			local x = ensure_id(id)
-			table.insert(entities, id)
 			table.insert(dense_a, a[x])
 			table.insert(dense_b, b[x])
 			table.insert(dense_c, c[x])
 		end
-		return entities, dense_a, dense_b, dense_c
+		return dense_a, dense_b, dense_c
 	end
 
 	local dense_d = {}
 	local e = storages[5]
 	if e == nil then
-		for id in next_entity do
+		for id in entities do
 			local x = ensure_id(id)
-			table.insert(entities, id)
 			table.insert(dense_a, a[x])
 			table.insert(dense_b, b[x])
 			table.insert(dense_c, c[x])
 			table.insert(dense_d, d[x])
 		end
-		return entities, dense_a, dense_b, dense_c, dense_d
+		return dense_a, dense_b, dense_c, dense_d
 	end
 
 	local dense_e = {}
 	local f = storages[6]
 	if f == nil then
-		for id in next_entity do
+		for id in entities do
 			local x = ensure_id(id)
-			table.insert(entities, id)
 			table.insert(dense_a, a[x])
 			table.insert(dense_b, b[x])
 			table.insert(dense_c, c[x])
 			table.insert(dense_d, d[x])
 			table.insert(dense_e, e[x])
 		end
-		return entities, dense_a, dense_b, dense_c, dense_d, dense_e
+		return dense_a, dense_b, dense_c, dense_d, dense_e
 	end
 
 	local dense_f = {}
 	local g = storages[7]
 	if g == nil then
-		for id in next_entity do
+		for id in entities do
 			local x = ensure_id(id)
-			table.insert(entities, id)
 			table.insert(dense_a, a[x])
 			table.insert(dense_b, b[x])
 			table.insert(dense_c, c[x])
@@ -239,15 +231,14 @@ local function arch_all(arch_handle: key): ({ key.id }, ...{ any })
 			table.insert(dense_e, e[x])
 			table.insert(dense_f, f[x])
 		end
-		return entities, dense_a, dense_b, dense_c, dense_d, dense_e, dense_f
+		return dense_a, dense_b, dense_c, dense_d, dense_e, dense_f
 	end
 
 	local dense_g = {}
 	local h = storages[8]
 	if h == nil then
-		for id in next_entity do
+		for id in entities do
 			local x = ensure_id(id)
-			table.insert(entities, id)
 			table.insert(dense_a, a[x])
 			table.insert(dense_b, b[x])
 			table.insert(dense_c, c[x])
@@ -256,9 +247,16 @@ local function arch_all(arch_handle: key): ({ key.id }, ...{ any })
 			table.insert(dense_f, f[x])
 			table.insert(dense_g, g[x])
 		end
-		return entities, dense_a, dense_b, dense_c, dense_d, dense_e, dense_f, dense_g
+		return dense_a, dense_b, dense_c, dense_d, dense_e, dense_f, dense_g
 	end
 	error('not implemented')
+end
+local function arch_all(arch_handle: key)
+	local entities = {}
+	for entity in iter_archetype_entities(get_root_ids(arch_handle)[1], get_excluded_attributes(arch_handle)) do
+		table.insert(entities, entity)
+	end
+	return entities, arch_bulk_find(arch_handle, entities)
 end
 
 local function arch_find(arch_handle: key, key: key): ...any
@@ -349,6 +347,7 @@ archetype_impl.assert_has = arch_assert_has
 archetype_impl.await_has = arch_await_has
 archetype_impl.assert = arch_assert
 archetype_impl.await = arch_await
+archetype_impl.bulk_find = arch_bulk_find
 archetype_impl.find = arch_find
 archetype_impl.iter = arch_iter
 archetype_impl.all = arch_all
