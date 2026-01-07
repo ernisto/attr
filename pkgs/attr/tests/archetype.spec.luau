@@ -43,7 +43,7 @@ function run.iter_smaller_archetypes_includes_subsets()
 	local AC = arch_attrs(A, C)
 	local ABC = arch_attrs(A, B, C)
 
-	assert_unordered_array(all_smaller_archetypes(ABC), { A, AB, AC, ABC })
+	assert_unordered_array(all_smaller_archetypes(ABC), { A, B, C, AB, AC, ABC })
 end
 
 function run.iter_smaller_archetypes_includes_subsets_without_transition()
