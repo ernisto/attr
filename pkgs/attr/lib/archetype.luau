@@ -260,7 +260,9 @@ end
 local function unbind_transitions(arch: archetype_id)
 	for attribute, prev_arch in with_removed[arch] do
 		with_added[prev_arch][attribute] = nil
+
 		local attribute_transitions = archetypes_with_transition_of[attribute]
+		if attribute_transitions == nil then continue end
 
 		local index = table.find(attribute_transitions, arch)
 		table.remove(attribute_transitions, index)
@@ -284,6 +286,7 @@ return table.freeze {
 	match_attributes = match_attributes,
 	has_some_attribute = has_some_attribute,
 	has_attribute = has_attribute,
+	archetypes_with_transition_of = archetypes_with_transition_of,
 	attributes = attributes,
 
 	next_archetype_without = next_archetype_without,

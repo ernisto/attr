@@ -20,6 +20,8 @@ local archetype_has_some_attribute = archetype.has_some_attribute
 local archetype_has_attribute = archetype.has_attribute
 local unbind_transitions = archetype.unbind_transitions
 local match_attributes = archetype.match_attributes
+
+local archetypes_with_transition_of = archetype.archetypes_with_transition_of
 local attributes = archetype.attributes
 
 -- defs
@@ -143,6 +145,7 @@ local function destroy_attribute(attribute: attribute_id)
 		table.insert(bigger_archetypes, archetype)
 	end
 
+	archetypes_with_transition_of[attribute] = nil
 	for _, archetype in bigger_archetypes do
 		head_id[archetype] = nil
 		unbind_transitions(archetype)
