@@ -96,14 +96,169 @@ local function get_root_excluded_ids(arch_handle: key): { number }
 end
 
 local function arch_iter(arch_handle: key): ...any
-	return iter_archetype_entities(get_root_ids(arch_handle)[1], get_excluded_attributes(arch_handle))
-end
-local function arch_all(arch_handle: key): { key.id }
-	local entities = {}
-	for entity in arch_iter(arch_handle) do
-		table.insert(entities, entity)
+	local next_entity = iter_archetype_entities(get_root_ids(arch_handle)[1], get_excluded_attributes(arch_handle))
+	local storages = attribute_storages[ensure_id(arch_handle)]
+
+	local a = storages[1]
+	if a == nil then return next_entity end
+
+	local b = storages[2]
+	if b == nil then
+		return function()
+			local id = next_entity()
+			return id, a[id]
+		end
 	end
-	return entities
+	local c = storages[3]
+	if c == nil then
+		return function()
+			local id = next_entity()
+			return id, a[id], b[id]
+		end
+	end
+	local d = storages[4]
+	if d == nil then
+		return function()
+			local id = next_entity()
+			return id, a[id], b[id], c[id]
+		end
+	end
+	local e = storages[5]
+	if e == nil then
+		return function()
+			local id = next_entity()
+			return id, a[id], b[id], c[id], d[id]
+		end
+	end
+	local f = storages[6]
+	if f == nil then
+		return function()
+			local id = next_entity()
+			return id, a[id], b[id], c[id], d[id], e[id]
+		end
+	end
+	local g = storages[7]
+	if g == nil then
+		return function()
+			local id = next_entity()
+			return id, a[id], b[id], c[id], d[id], e[id], f[id]
+		end
+	end
+	local h = storages[8]
+	if h == nil then
+		return function()
+			local id = next_entity()
+			return id, a[id], b[id], c[id], d[id], e[id], f[id], g[id]
+		end
+	end
+	error('not implemented')
+end
+local function arch_all(arch_handle: key): ({ key.id }, ...{ any })
+	local next_entity = arch_iter(arch_handle)
+	local storages = attribute_storages[ensure_id(arch_handle)]
+
+	local entities = {}
+	local a = storages[1]
+	if a == nil then return next_entity end
+
+	local dense_a = {}
+	local b = storages[2]
+	if b == nil then
+		for id in next_entity do
+			local x = ensure_id(id)
+			table.insert(entities, id)
+			table.insert(dense_a, a[x])
+		end
+		return entities, dense_a
+	end
+
+	local dense_b = {}
+	local c = storages[3]
+	if c == nil then
+		for id in next_entity do
+			local x = ensure_id(id)
+			table.insert(entities, id)
+			table.insert(dense_a, a[x])
+			table.insert(dense_b, b[x])
+		end
+		return entities, dense_a, dense_b
+	end
+
+	local dense_c = {}
+	local d = storages[4]
+	if d == nil then
+		for id in next_entity do
+			local x = ensure_id(id)
+			table.insert(entities, id)
+			table.insert(dense_a, a[x])
+			table.insert(dense_b, b[x])
+			table.insert(dense_c, c[x])
+		end
+		return entities, dense_a, dense_b, dense_c
+	end
+
+	local dense_d = {}
+	local e = storages[5]
+	if e == nil then
+		for id in next_entity do
+			local x = ensure_id(id)
+			table.insert(entities, id)
+			table.insert(dense_a, a[x])
+			table.insert(dense_b, b[x])
+			table.insert(dense_c, c[x])
+			table.insert(dense_d, d[x])
+		end
+		return entities, dense_a, dense_b, dense_c, dense_d
+	end
+
+	local dense_e = {}
+	local f = storages[6]
+	if f == nil then
+		for id in next_entity do
+			local x = ensure_id(id)
+			table.insert(entities, id)
+			table.insert(dense_a, a[x])
+			table.insert(dense_b, b[x])
+			table.insert(dense_c, c[x])
+			table.insert(dense_d, d[x])
+			table.insert(dense_e, e[x])
+		end
+		return entities, dense_a, dense_b, dense_c, dense_d, dense_e
+	end
+
+	local dense_f = {}
+	local g = storages[7]
+	if g == nil then
+		for id in next_entity do
+			local x = ensure_id(id)
+			table.insert(entities, id)
+			table.insert(dense_a, a[x])
+			table.insert(dense_b, b[x])
+			table.insert(dense_c, c[x])
+			table.insert(dense_d, d[x])
+			table.insert(dense_e, e[x])
+			table.insert(dense_f, f[x])
+		end
+		return entities, dense_a, dense_b, dense_c, dense_d, dense_e, dense_f
+	end
+
+	local dense_g = {}
+	local h = storages[8]
+	if h == nil then
+		for id in next_entity do
+			local x = ensure_id(id)
+			table.insert(entities, id)
+			table.insert(dense_a, a[x])
+			table.insert(dense_b, b[x])
+			table.insert(dense_c, c[x])
+			table.insert(dense_d, d[x])
+			table.insert(dense_e, e[x])
+			table.insert(dense_f, f[x])
+			table.insert(dense_g, g[x])
+		end
+		return entities, dense_a, dense_b, dense_c, dense_d, dense_e, dense_f, dense_g
+	end
+	error('not implemented')
 end
 
 local function arch_find(arch_handle: key, key: key): ...any
@@ -136,7 +291,7 @@ local function arch_find(arch_handle: key, key: key): ...any
 	if h == nil then return a[id], b[id], c[id], d[id], e[id], f[id], g[id] end
 
 	local datas = { a[id], b[id], c[id], d[id], e[id], f[id], g[id], h[id] }
-	for i, storage in attributes do
+	for i, storage in storages do
 		if i <= 8 then continue end
 		datas[i] = storage[id]
 	end
@@ -240,7 +395,7 @@ end
 -- types
 export type extract_T<T> = base_arch<any, any, T>
 export type base_impl<T...> = {
-	iter: (any) -> () -> key.id,
+	iter: (any) -> () -> (key.id, T...),
 	all: (any) -> { key.id },
 
 	assert_await_has: (any, key: key.key) -> (),
