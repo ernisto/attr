@@ -151,6 +151,8 @@ local function destroy_attribute(attribute: attribute_id)
 
 		cleanup_archetype_events(archetype)
 		unbind_transitions(archetype)
+
+		if archetype == attribute then continue end
 		free_id(archetype)
 	end
 end
