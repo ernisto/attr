@@ -70,36 +70,36 @@ local function destroy_targets_of_key(tracked_targets_of_key: key.tracked_id)
 	destroy_attribute(targets_of_key)
 	attrs[id] = nil
 end
-local function get_key_targets(attrs: linkN, id: id): id
-	if attrs[id] then return attrs[id] end
+local function get_key_targets_tag(tags: linkN, id: id): id
+	if tags[id] then return tags[id] end
 
-	local targets_of_key, tracked_arch = ensure_id()
-	storage[targets_of_key] = attrs
-	id_of_targets[targets_of_key] = id
+	local tag, tracked_tag = ensure_id()
+	id_of_targets[tag] = id
+	storage[tag] = tags
 
-	on_destroy(targets_of_key, destroy_targets_of_key)
-	on_destroy(id, tracked_arch)
+	on_destroy(tag, destroy_targets_of_key)
+	on_destroy(id, tracked_tag)
 
-	archetype_with_attr(targets_of_key)
-	bind_transition(ensure_id(attrs), targets_of_key, targets_of_key)
+	archetype_with_attr(tag)
+	bind_transition(ensure_id(tags), tag, tag)
 
-	attrs[id] = targets_of_key
-	return targets_of_key
+	tags[id] = tag
+	return tag
 end
 local function find_target_key_without_backlink(attr: linkN, target: key.tracked_id) -- TODO
 	return nil
 end
 
 local function linkN_add(data: linkN, id: id, target: key.tracked_id)
-	local key_target = get_key_targets(data, id)
-	move_entity_archetype_to_with(target, key_target)
+	local target_tag = get_key_targets_tag(data, id)
+	move_entity_archetype_to_with(target, target_tag)
 end
 local function linkN_remove(data: linkN, id: id, target: key.tracked_id?)
-	local key_target = data[id]
-	if key_target == nil then return end
+	local target_tag = data[id]
+	if target_tag == nil then return end
 
-	if target == nil then return destroy(key_target) end
-	move_entity_archetype_to_without(target, key_target)
+	if target == nil then return destroy(target_tag) end
+	move_entity_archetype_to_without(target, target_tag)
 end
 
 -- methods
@@ -204,9 +204,9 @@ end
 -- utils
 local function linkN_targets_of(data: linkN, key: key): archetype_handle.arch1<nil>?
 	local id = find_id(key) or error(`attempt to use dead reference '{key}'`)
-	local arch_id = get_key_targets(data, id)
+	local tag_id = get_key_targets_tag(data, id)
 
-	return handle_archetype_id(arch_id) :: any
+	return handle_archetype_id(tag_id) :: any
 end
 
 local function linkN_iter(data: linkN, key: key?): () -> id?
