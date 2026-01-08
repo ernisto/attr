@@ -8,7 +8,7 @@ local free_id = key.free_id
 local alive = key.unsafe_alive
 
 local archetype_event = require './archetype_event'
-local archetype_connection_roots = archetype_event.connection_roots
+local cleanup_archetype_events = archetype_event.cleanup
 local fire_removed_event = archetype_event.fire_remove
 local fire_added_event = archetype_event.fire_add
 
@@ -148,15 +148,10 @@ local function destroy_attribute(attribute: attribute_id)
 	archetypes_with_transition_of[attribute] = nil
 	for _, archetype in bigger_archetypes do
 		head_id[archetype] = nil
+
+		cleanup_archetype_events(archetype)
 		unbind_transitions(archetype)
 		free_id(archetype)
-
-		local connections = archetype_connection_roots[archetype]
-		if connections == nil then continue end
-
-		for _, disconnect in connections do
-			disconnect()
-		end
 	end
 end
 

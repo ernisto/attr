@@ -84,12 +84,23 @@ local function event()
 		return disconnect
 	end
 
-	return fire_event, bind_event
+	local function cleanup(arch)
+		dense_inherited_callbacks[arch] = nil
+	end
+
+	return fire_event, bind_event, cleanup
 end
 
-local fire_remove, bind_remove = event()
-local fire_change, bind_change = event()
-local fire_add, bind_add = event()
+local fire_remove, bind_remove, cleanup_remove = event()
+local fire_change, bind_change, cleanup_change = event()
+local fire_add, bind_add, cleanup_add = event()
+
+local function cleanup(arch: archetype_id)
+	connection_roots[arch] = nil
+	cleanup_remove(arch)
+	cleanup_change(arch)
+	cleanup_add(arch)
+end
 
 -- module
 return table.freeze {
@@ -103,5 +114,6 @@ return table.freeze {
 	fire_add = fire_add,
 
 	connection_roots = connection_roots,
+	cleanup = cleanup,
 	new = event,
 }
