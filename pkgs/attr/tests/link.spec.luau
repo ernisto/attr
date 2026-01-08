@@ -1,3 +1,4 @@
+local any = require '@lib/any'
 local cleanup = require '@lib/cleanup'
 local key = require '@lib/key'
 local link = require '@lib/link'
@@ -207,6 +208,22 @@ function run.link_NN_removes_when_target_destroyed()
 	assert(not a_to_bs:has(a2, _b), 'a2 -> b removed on destroy(b)')
 	assert(not b_to_as:has(_b, a1), 'back a1 cleared on destroy(b)')
 	assert(not b_to_as:has(_b, a2), 'back a2 cleared on destroy(b)')
+end
+
+function run.destroy_link_tag()
+	local a_to_bs = link.link_NN()
+	local attribute = any.new(1)
+	local _b, b = key.ensure_id()
+	local _a, a = key.ensure_id()
+
+	attribute:add(a)
+	attribute:add(b)
+
+	a_to_bs:add(a, b)
+	cleanup.destroy(b)
+
+	assert(a_to_bs[_a] == nil)
+	assert(a_to_bs[_b] == nil)
 end
 
 return { run = run, skip = skip, focus = focus }
