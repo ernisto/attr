@@ -99,59 +99,38 @@ local function arch_iter(arch_handle: key): ...any
 	local next_entity = iter_archetype_entities(get_root_ids(arch_handle)[1], get_excluded_attributes(arch_handle))
 	local storages = attribute_storages[ensure_id(arch_handle)]
 
-	local a = storages[1]
-	if a == nil then return next_entity end
-
-	local b = storages[2]
-	if b == nil then
-		return function()
+	local a, b, c, d, e, f, g, h = unpack(storages)
+	return if a == nil
+		then next_entity
+		elseif b == nil then function()
 			local id = next_entity()
 			return id, a[id]
 		end
-	end
-	local c = storages[3]
-	if c == nil then
-		return function()
+		elseif c == nil then function()
 			local id = next_entity()
 			return id, a[id], b[id]
 		end
-	end
-	local d = storages[4]
-	if d == nil then
-		return function()
+		elseif d == nil then function()
 			local id = next_entity()
 			return id, a[id], b[id], c[id]
 		end
-	end
-	local e = storages[5]
-	if e == nil then
-		return function()
+		elseif e == nil then function()
 			local id = next_entity()
 			return id, a[id], b[id], c[id], d[id]
 		end
-	end
-	local f = storages[6]
-	if f == nil then
-		return function()
+		elseif f == nil then function()
 			local id = next_entity()
 			return id, a[id], b[id], c[id], d[id], e[id]
 		end
-	end
-	local g = storages[7]
-	if g == nil then
-		return function()
+		elseif g == nil then function()
 			local id = next_entity()
 			return id, a[id], b[id], c[id], d[id], e[id], f[id]
 		end
-	end
-	local h = storages[8]
-	if h == nil then
-		return function()
+		elseif h == nil then function()
 			local id = next_entity()
 			return id, a[id], b[id], c[id], d[id], e[id], f[id], g[id]
 		end
-	end
-	error('not implemented')
+		else error('not implemented')
 end
 local function arch_bulk_find(arch_handle: key, entities: { key.id }): ...{ any }
 	local storages = attribute_storages[ensure_id(arch_handle)]
